@@ -5,14 +5,18 @@ namespace App\Services;
 use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
     public const PORTAL_ADMIN = 'ADMIN';
+
     public const PORTAL_RESTAURANT = 'RESTAURANT';
+
     public const PORTAL_DELIVERY = 'DELIVERY';
+
     public const PORTAL_CUSTOMER = 'CUSTOMER';
 
     /**
@@ -35,14 +39,14 @@ class AuthService
             ->orWhere('phone', $login)
             ->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (! $user || ! Hash::check($password, $user->password)) {
             ActivityLog::log('FAILED_LOGIN_ATTEMPT', null, null, null, ['login' => $login, 'portal' => $portal]);
             throw ValidationException::withMessages([
                 'email' => __('بيانات الاعتماد غير متطابقة مع سجلاتنا.'),
             ]);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             throw ValidationException::withMessages([
                 'email' => __('تم تعطيل هذا الحساب. يرجى التواصل مع الإدارة.'),
             ]);
@@ -50,7 +54,7 @@ class AuthService
 
         // Verify portal role
         $allowedRoles = $this->portalRoles[$portal] ?? [];
-        if (!in_array($user->role, $allowedRoles)) {
+        if (! in_array($user->role, $allowedRoles)) {
             ActivityLog::log('UNAUTHORIZED_PORTAL_ACCESS_ATTEMPT', 'User', $user->id, null, ['portal' => $portal, 'user_role' => $user->role]);
             throw ValidationException::withMessages([
                 'email' => __('غير مصرح لك بتسجيل الدخول من هذه البوابة.'),
@@ -60,7 +64,7 @@ class AuthService
         // For restaurant portal, verify restaurant association and status
         if ($portal === self::PORTAL_RESTAURANT) {
             $restaurant = $user->restaurant;
-            if (!$restaurant) {
+            if (! $restaurant) {
                 throw ValidationException::withMessages([
                     'email' => __('هذا الحساب غير مرتبط بأي مطعم مسجل.'),
                 ]);
@@ -70,7 +74,7 @@ class AuthService
         // For delivery portal, verify driver profile and restaurant
         if ($portal === self::PORTAL_DELIVERY) {
             $driver = $user->deliveryDriver;
-            if (!$driver || !$driver->is_active) {
+            if (! $driver || ! $driver->is_active) {
                 throw ValidationException::withMessages([
                     'email' => __('حساب مندوب التوصيل غير مفعل أو غير مرتبط بمطعم.'),
                 ]);
@@ -80,9 +84,33 @@ class AuthService
         Auth::login($user, $remember);
         request()->session()->regenerate();
 
+        if ($remember) {
+            $this->persistSessionForRememberedLogin();
+        }
+
         ActivityLog::log('USER_LOGIN', 'User', $user->id, null, ['portal' => $portal]);
 
         return $user;
+    }
+
+    /**
+     * Keep the session cookie alive after the browser is closed (keep me logged in).
+     */
+    private function persistSessionForRememberedLogin(): void
+    {
+        Cookie::queue(
+            cookie(
+                config('session.cookie'),
+                session()->getId(),
+                (int) config('session.remember_lifetime'),
+                config('session.path'),
+                config('session.domain'),
+                (bool) config('session.secure'),
+                (bool) config('session.http_only'),
+                false,
+                config('session.same_site'),
+            )
+        );
     }
 
     /**

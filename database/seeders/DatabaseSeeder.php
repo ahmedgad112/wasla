@@ -70,7 +70,9 @@ class DatabaseSeeder extends Seeder
 
         // 2. System Settings & CMS
         $settings = [
-            ['key' => 'app_name', 'value' => 'فطرنا شكراً', 'group' => 'branding', 'type' => 'string', 'description' => 'اسم المنصة'],
+            ['key' => 'app_name', 'value' => 'وصلة', 'group' => 'branding', 'type' => 'string', 'description' => 'اسم المنصة'],
+            ['key' => 'platform_name_ar', 'value' => 'وصلة', 'group' => 'cms', 'type' => 'string', 'description' => 'اسم المنصة بالعربي'],
+            ['key' => 'platform_name_en', 'value' => 'Wasla', 'group' => 'cms', 'type' => 'string', 'description' => 'اسم المنصة بالإنجليزي'],
             ['key' => 'app_slogan', 'value' => 'أشهى المأكولات في برج العرب بضغطة زر', 'group' => 'branding', 'type' => 'string', 'description' => 'شعار المنصة'],
             ['key' => 'hero_title', 'value' => 'اطلب أكلتك المفضلة من مطاعم برج العرب', 'group' => 'cms', 'type' => 'string', 'description' => 'عنوان الهيرو الرئيسي'],
             ['key' => 'hero_description', 'value' => 'منصة متكاملة لطلب وتوصيل الطعام لجميع أحياء برج العرب وجامعة برج العرب التكنولوجية والجامعة اليابانية.', 'group' => 'cms', 'type' => 'string', 'description' => 'وصف الهيرو'],
@@ -80,6 +82,7 @@ class DatabaseSeeder extends Seeder
             ['key' => 'show_offers_section', 'value' => '1', 'group' => 'cms', 'type' => 'boolean', 'description' => 'إظهار قسم العروض'],
             ['key' => 'show_restaurants_section', 'value' => '1', 'group' => 'cms', 'type' => 'boolean', 'description' => 'إظهار قسم المطاعم المميزة'],
             ['key' => 'show_stats_section', 'value' => '1', 'group' => 'cms', 'type' => 'boolean', 'description' => 'إظهار الإحصائيات'],
+            ['key' => 'default_delivery_fee', 'value' => '10.00', 'group' => 'finance', 'type' => 'string', 'description' => 'رسوم التوصيل الافتراضية للمنصة'],
         ];
 
         foreach ($settings as $s) {
@@ -137,10 +140,13 @@ class DatabaseSeeder extends Seeder
                 'latitude' => 30.9167,
                 'longitude' => 29.6167,
                 'status' => 'ACTIVE',
+                'availability_status' => 'OPEN',
                 'opening_time' => '06:00',
                 'closing_time' => '23:30',
                 'minimum_order_amount' => 40.00,
                 'delivery_fee' => 15.00,
+                'delivery_provider' => 'RESTAURANT',
+                'delivery_enabled' => true,
                 'estimated_delivery_time' => 30,
                 'student_discount_percentage' => 10.00,
                 'commission_type' => 'PERCENTAGE',
@@ -301,10 +307,13 @@ class DatabaseSeeder extends Seeder
                 'latitude' => 30.9180,
                 'longitude' => 29.6200,
                 'status' => 'ACTIVE',
+                'availability_status' => 'OPEN',
                 'opening_time' => '10:00',
                 'closing_time' => '02:00',
                 'minimum_order_amount' => 80.00,
                 'delivery_fee' => 20.00,
+                'delivery_provider' => 'PLATFORM',
+                'delivery_enabled' => true,
                 'estimated_delivery_time' => 45,
                 'student_discount_percentage' => 15.00,
                 'commission_type' => 'PERCENTAGE',
@@ -381,7 +390,7 @@ class DatabaseSeeder extends Seeder
 
         // 9. Sample Order in progress
         $order = Order::firstOrCreate(
-            ['order_number' => 'FS-' . date('Ymd') . '-DEMO1'],
+            ['order_number' => 'FS-'.date('Ymd').'-DEMO1'],
             [
                 'customer_id' => $customer->id,
                 'restaurant_id' => $shabrawy->id,

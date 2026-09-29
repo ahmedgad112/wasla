@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Restaurant;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Offer;
+use App\Services\PublicCatalogCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,15 +17,17 @@ class OfferController extends Controller
     private function restaurant()
     {
         $restaurant = auth()->user()->restaurant;
-        abort_if(!$restaurant, 403);
+        abort_if(! $restaurant, 403);
+
         return $restaurant;
     }
 
     public function index(): Response
     {
         $restaurant = $this->restaurant();
+
         return Inertia::render('Restaurant/Offers/Index', [
-            'offers'     => Offer::where('restaurant_id', $restaurant->id)->latest()->paginate(15),
+            'offers' => Offer::where('restaurant_id', $restaurant->id)->latest()->paginate(15),
             'restaurant' => $restaurant,
         ]);
     }
@@ -31,6 +35,7 @@ class OfferController extends Controller
     public function create(): Response
     {
         $restaurant = $this->restaurant();
+
         return Inertia::render('Restaurant/Offers/Create', [
             'categories' => Category::where('restaurant_id', $restaurant->id)->where('is_active', true)->get(['id', 'name']),
         ]);
@@ -40,31 +45,31 @@ class OfferController extends Controller
     {
         $restaurant = $this->restaurant();
         $validated = $request->validate([
-            'title'              => 'required|string|max:255',
-            'description'        => 'nullable|string',
-            'original_price'     => 'required|numeric|min:0',
-            'discount_price'     => 'required|numeric|min:0',
-            'is_active'          => 'nullable|boolean',
-            'is_student_only'    => 'nullable|boolean',
-            'start_date'         => 'nullable|date',
-            'end_date'           => 'nullable|date|after_or_equal:start_date',
-            'image'              => 'nullable|image|max:10240',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'original_price' => 'required|numeric|min:0',
+            'discount_price' => 'required|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+            'is_student_only' => 'nullable|boolean',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'image' => 'nullable|image|max:10240',
         ]);
 
         $orig = (float) $validated['original_price'];
         $disc = (float) $validated['discount_price'];
 
         $offerData = [
-            'restaurant_id'       => $restaurant->id,
-            'title'               => $validated['title'],
-            'description'         => $validated['description'] ?? null,
-            'original_price'      => $orig,
-            'discount_price'      => $disc,
+            'restaurant_id' => $restaurant->id,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'original_price' => $orig,
+            'discount_price' => $disc,
             'discount_percentage' => $orig > 0 ? round((($orig - $disc) / $orig) * 100, 1) : 0,
-            'is_active'           => $request->boolean('is_active', true),
-            'is_student_only'     => $request->boolean('is_student_only', false),
-            'start_date'          => $validated['start_date'] ?? now(),
-            'end_date'            => $validated['end_date'] ?? now()->addMonths(1),
+            'is_active' => $request->boolean('is_active', true),
+            'is_student_only' => $request->boolean('is_student_only', false),
+            'start_date' => $validated['start_date'] ?? now(),
+            'end_date' => $validated['end_date'] ?? now()->addMonths(1),
         ];
 
         if ($request->hasFile('image')) {
@@ -76,6 +81,7 @@ class OfferController extends Controller
 
         // Clear public offers cache
         cache()->forget('public.active_offers');
+        PublicCatalogCache::forgetRestaurant($restaurant->slug);
 
         return redirect()->route('restaurant.offers.index')->with('success', 'تم إنشاء العرض الترويجي بنجاح.');
     }
@@ -84,6 +90,7 @@ class OfferController extends Controller
     {
         $restaurant = $this->restaurant();
         $offer = Offer::where('restaurant_id', $restaurant->id)->findOrFail($id);
+
         return Inertia::render('Restaurant/Offers/Edit', ['offer' => $offer]);
     }
 
@@ -91,42 +98,42 @@ class OfferController extends Controller
     {
         $restaurant = $this->restaurant();
         $offer = Offer::where('restaurant_id', $restaurant->id)->findOrFail($id);
-        
+
         $validated = $request->validate([
-            'title'           => 'required|string|max:255',
-            'description'     => 'nullable|string',
-            'original_price'  => 'required|numeric|min:0',
-            'discount_price'  => 'required|numeric|min:0',
-            'is_active'       => 'nullable|boolean',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'original_price' => 'required|numeric|min:0',
+            'discount_price' => 'required|numeric|min:0',
+            'is_active' => 'nullable|boolean',
             'is_student_only' => 'nullable|boolean',
-            'start_date'      => 'nullable|date',
-            'end_date'        => 'nullable|date|after_or_equal:start_date',
-            'image'           => 'nullable|image|max:10240',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'image' => 'nullable|image|max:10240',
         ]);
 
         $orig = (float) $validated['original_price'];
         $disc = (float) $validated['discount_price'];
 
         $updateData = [
-            'title'               => $validated['title'],
-            'description'         => $validated['description'] ?? null,
-            'original_price'      => $orig,
-            'discount_price'      => $disc,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'original_price' => $orig,
+            'discount_price' => $disc,
             'discount_percentage' => $orig > 0 ? round((($orig - $disc) / $orig) * 100, 1) : 0,
-            'is_active'           => $request->has('is_active') ? $request->boolean('is_active') : $offer->is_active,
-            'is_student_only'     => $request->has('is_student_only') ? $request->boolean('is_student_only') : $offer->is_student_only,
+            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : $offer->is_active,
+            'is_student_only' => $request->has('is_student_only') ? $request->boolean('is_student_only') : $offer->is_student_only,
         ];
 
-        if (!empty($validated['start_date'])) {
+        if (! empty($validated['start_date'])) {
             $updateData['start_date'] = $validated['start_date'];
         }
-        if (!empty($validated['end_date'])) {
+        if (! empty($validated['end_date'])) {
             $updateData['end_date'] = $validated['end_date'];
         }
 
         if ($request->hasFile('image')) {
-            if ($offer->image && !str_starts_with($offer->image, 'http') && \Illuminate\Support\Facades\Storage::disk('public')->exists($offer->image)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($offer->image);
+            if ($offer->image && ! str_starts_with($offer->image, 'http') && Storage::disk('public')->exists($offer->image)) {
+                Storage::disk('public')->delete($offer->image);
             }
             $path = $request->file('image')->store("restaurants/{$restaurant->id}/offers", 'public');
             $updateData['image'] = $path;
@@ -134,6 +141,8 @@ class OfferController extends Controller
 
         $offer->update($updateData);
         cache()->forget('public.active_offers');
+        PublicCatalogCache::forgetRestaurant($restaurant->slug);
+
         return back()->with('success', 'تم تحديث العرض بنجاح.');
     }
 
@@ -143,6 +152,8 @@ class OfferController extends Controller
         $offer = Offer::where('restaurant_id', $restaurant->id)->findOrFail($id);
         $offer->delete();
         cache()->forget('public.active_offers');
+        PublicCatalogCache::forgetRestaurant($restaurant->slug);
+
         return back()->with('success', 'تم حذف العرض.');
     }
 
@@ -150,8 +161,10 @@ class OfferController extends Controller
     {
         $restaurant = $this->restaurant();
         $offer = Offer::where('restaurant_id', $restaurant->id)->findOrFail($id);
-        $offer->update(['is_active' => !$offer->is_active]);
+        $offer->update(['is_active' => ! $offer->is_active]);
         cache()->forget('public.active_offers');
+        PublicCatalogCache::forgetRestaurant($restaurant->slug);
+
         return back()->with('success', $offer->is_active ? 'تم تفعيل العرض.' : 'تم إيقاف العرض.');
     }
 }

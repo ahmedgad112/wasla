@@ -23,7 +23,7 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         $appName = cache()->remember('system_setting.app_name', 3600, function () {
-            return SystemSetting::where('key', 'app_name')->value('value') ?? 'فطرنا شكراً';
+            return SystemSetting::where('key', 'app_name')->value('value') ?? 'وصلة';
         });
 
         $appSlogan = cache()->remember('system_setting.app_slogan', 3600, function () {
@@ -50,10 +50,10 @@ class HandleInertiaRequests extends Middleware
                     60,
                     function () use ($user) {
                         $restaurant = $user->restaurantStaff()
-                            ->with('restaurant:id,name,status,logo')
+                            ->with('restaurant:id,name,status,logo,availability_status')
                             ->first()?->restaurant;
 
-                        return $restaurant?->only('id', 'name', 'status', 'logo');
+                        return $restaurant?->only('id', 'name', 'status', 'logo', 'availability_status');
                     }
                 );
             }
@@ -61,19 +61,19 @@ class HandleInertiaRequests extends Middleware
 
         return array_merge(parent::share($request), [
             'auth' => [
-                'user'        => $user ? $user->only('id', 'name', 'email', 'phone', 'role', 'is_active', 'avatar') : null,
+                'user' => $user ? $user->only('id', 'name', 'email', 'phone', 'role', 'is_active', 'avatar') : null,
                 'permissions' => $permissions,
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),
-                'error'   => $request->session()->get('error'),
+                'error' => $request->session()->get('error'),
                 'warning' => $request->session()->get('warning'),
-                'info'    => $request->session()->get('info'),
+                'info' => $request->session()->get('info'),
             ],
-            'app_name'           => $appName,
-            'app_slogan'         => $appSlogan,
-            'support_phone'      => $supportPhone,
-            'shell_restaurant'   => $shellRestaurant,
+            'app_name' => $appName,
+            'app_slogan' => $appSlogan,
+            'support_phone' => $supportPhone,
+            'shell_restaurant' => $shellRestaurant,
         ]);
     }
 }

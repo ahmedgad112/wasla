@@ -17,6 +17,8 @@ class DeliveryQuoteController extends Controller
             'longitude' => ['required', 'numeric', 'between:-180,180'],
         ]);
         $restaurant = Restaurant::findOrFail($data['restaurant_id']);
+        abort_unless(! $restaurant->isPickupOnly(), 422, 'هذا المطعم للاستلام فقط ولا يدعم التوصيل.');
+        abort_unless($restaurant->isDeliveryAvailable(), 422, 'التوصيل غير متاح حالياً من هذا المطعم.');
         abort_unless($restaurant->latitude !== null && $restaurant->longitude !== null, 422, 'لا يوجد موقع دقيق للمطعم بعد.');
 
         $route = $routing->drivingRoute((float) $restaurant->latitude, (float) $restaurant->longitude, (float) $data['latitude'], (float) $data['longitude']);

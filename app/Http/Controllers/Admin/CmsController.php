@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\SystemSetting;
+use App\Services\PublicCatalogCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -45,9 +46,7 @@ class CmsController extends Controller
         // Clear cached settings
         cache()->forget('system_setting.app_name');
         cache()->forget('system_setting.app_slogan');
-        cache()->forget('public.stats');
-        cache()->forget('public.featured_restaurants');
-        cache()->forget('public.active_offers');
+        PublicCatalogCache::forgetListing();
 
         ActivityLog::log('CMS_SETTINGS_UPDATED', null, null);
 

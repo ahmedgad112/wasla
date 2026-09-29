@@ -1,15 +1,22 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import react from '@vitejs/plugin-react';
+import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.tsx'],
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
         }),
-        react(),
+        vue({
+            template: {
+                transformAssetUrls: {
+                    base: null,
+                    includeAbsolute: false,
+                },
+            },
+        }),
         tailwindcss(),
     ],
     resolve: {
@@ -21,14 +28,14 @@ export default defineConfig({
         reportCompressedSize: false,
         chunkSizeWarningLimit: 1500,
         rollupOptions: {
-            input: ['resources/css/app.css', 'resources/js/app.tsx'],
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
             output: {
                 manualChunks(id) {
                     if (!id.includes('node_modules')) return;
                     if (id.includes('leaflet')) return 'maps';
-                    if (id.includes('recharts')) return 'charts';
-                    if (id.includes('lucide-react')) return 'icons';
-                    if (id.includes('react') || id.includes('inertia')) return 'framework';
+                    if (id.includes('chart.js') || id.includes('vue-chartjs')) return 'charts';
+                    if (id.includes('@lucide/vue') || id.includes('lucide')) return 'icons';
+                    if (id.includes('vue') || id.includes('inertia') || id.includes('pinia')) return 'framework';
                 },
             },
         },

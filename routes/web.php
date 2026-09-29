@@ -1,40 +1,41 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLog;
+use App\Http\Controllers\Admin\AnalyticsController as AdminAnalytics;
+use App\Http\Controllers\Admin\BackupController as AdminBackup;
+use App\Http\Controllers\Admin\BillingHubController as AdminBillingHub;
+use App\Http\Controllers\Admin\CmsController as AdminCms;
+use App\Http\Controllers\Admin\CollectionController as AdminCollection;
+use App\Http\Controllers\Admin\CustomerController as AdminCustomer;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
+use App\Http\Controllers\Admin\DeliveryDriverController as AdminDriver;
+use App\Http\Controllers\Admin\FinanceController as AdminFinance;
+use App\Http\Controllers\Admin\InvoiceController as AdminInvoice;
+use App\Http\Controllers\Admin\OrderController as AdminOrder;
+use App\Http\Controllers\Admin\RestaurantController as AdminRestaurant;
+use App\Http\Controllers\Admin\SettingsController as AdminSettings;
+use App\Http\Controllers\Admin\UserController as AdminUser;
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Public\PublicController;
+use App\Http\Controllers\Customer\CartController;
+use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\CustomerDashboardController;
 use App\Http\Controllers\Customer\CustomerOrderController;
 use App\Http\Controllers\Customer\CustomerProfileController;
-use App\Http\Controllers\Customer\CartController;
-use App\Http\Controllers\Customer\CheckoutController;
-use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
-use App\Http\Controllers\Admin\RestaurantController as AdminRestaurant;
-use App\Http\Controllers\Admin\OrderController as AdminOrder;
-use App\Http\Controllers\Admin\CustomerController as AdminCustomer;
-use App\Http\Controllers\Admin\UserController as AdminUser;
-use App\Http\Controllers\Admin\FinanceController as AdminFinance;
-use App\Http\Controllers\Admin\InvoiceController as AdminInvoice;
-use App\Http\Controllers\Admin\CollectionController as AdminCollection;
-use App\Http\Controllers\Admin\BillingHubController as AdminBillingHub;
-use App\Http\Controllers\Admin\AnalyticsController as AdminAnalytics;
-use App\Http\Controllers\Admin\CmsController as AdminCms;
-use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLog;
-use App\Http\Controllers\Admin\BackupController as AdminBackup;
-use App\Http\Controllers\Admin\SettingsController as AdminSettings;
-use App\Http\Controllers\Admin\DeliveryDriverController as AdminDriver;
-use App\Http\Controllers\Restaurant\DashboardController as RestaurantDashboard;
-use App\Http\Controllers\Restaurant\OrderController as RestaurantOrder;
-use App\Http\Controllers\Restaurant\CategoryController as RestaurantCategory;
-use App\Http\Controllers\Restaurant\MenuItemController as RestaurantMenuItem;
-use App\Http\Controllers\Restaurant\OfferController as RestaurantOffer;
-use App\Http\Controllers\Restaurant\DeliveryDriverController as RestaurantDriver;
-use App\Http\Controllers\Restaurant\AnalyticsController as RestaurantAnalytics;
-use App\Http\Controllers\Restaurant\DriverStatsController as RestaurantDriverStats;
-use App\Http\Controllers\Restaurant\SettingsController as RestaurantSettings;
-use App\Http\Controllers\Restaurant\BillingController as RestaurantBilling;
+use App\Http\Controllers\Customer\DeliveryQuoteController;
 use App\Http\Controllers\Delivery\DashboardController as DeliveryDashboard;
 use App\Http\Controllers\Delivery\OrderController as DeliveryOrder;
 use App\Http\Controllers\Delivery\ProfileController as DeliveryProfile;
+use App\Http\Controllers\Public\PublicController;
+use App\Http\Controllers\Restaurant\AnalyticsController as RestaurantAnalytics;
+use App\Http\Controllers\Restaurant\BillingController as RestaurantBilling;
+use App\Http\Controllers\Restaurant\CategoryController as RestaurantCategory;
+use App\Http\Controllers\Restaurant\DashboardController as RestaurantDashboard;
+use App\Http\Controllers\Restaurant\DeliveryDriverController as RestaurantDriver;
+use App\Http\Controllers\Restaurant\DriverStatsController as RestaurantDriverStats;
+use App\Http\Controllers\Restaurant\MenuItemController as RestaurantMenuItem;
+use App\Http\Controllers\Restaurant\OfferController as RestaurantOffer;
+use App\Http\Controllers\Restaurant\OrderController as RestaurantOrder;
+use App\Http\Controllers\Restaurant\SettingsController as RestaurantSettings;
 use Illuminate\Support\Facades\Route;
 
 // =====================================================
@@ -43,6 +44,7 @@ use Illuminate\Support\Facades\Route;
 Route::controller(PublicController::class)->group(function () {
     Route::get('/', 'home')->name('home');
     Route::get('/restaurants', 'restaurants')->name('restaurants');
+    Route::get('/restaurants/availability-statuses', 'availabilityStatuses')->name('restaurants.availability');
     Route::get('/restaurants/{slug}', 'restaurantDetails')->name('restaurant.show');
     Route::get('/offers', 'offers')->name('offers');
     Route::get('/leaderboard', 'leaderboard')->name('leaderboard');
@@ -91,7 +93,7 @@ Route::middleware(['auth', 'portal:CUSTOMER'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('customer.checkout');
     Route::get('/customer/checkout', [CheckoutController::class, 'index'])->name('customer.checkout.alias');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('customer.checkout.store');
-    Route::post('/delivery-quote', \App\Http\Controllers\Customer\DeliveryQuoteController::class)->name('customer.delivery-quote');
+    Route::post('/delivery-quote', DeliveryQuoteController::class)->name('customer.delivery-quote');
     Route::post('/orders', [CheckoutController::class, 'store'])->name('customer.orders.store');
     Route::post('/customer/orders', [CheckoutController::class, 'store'])->name('customer.orders.store.alias');
 
@@ -252,6 +254,7 @@ Route::middleware(['auth', 'portal:RESTAURANT', 'billing.check'])->prefix('resta
     // Settings
     Route::get('/settings', [RestaurantSettings::class, 'index'])->name('settings.index');
     Route::match(['put', 'post'], '/settings', [RestaurantSettings::class, 'update'])->name('settings.update');
+    Route::post('/settings/availability', [RestaurantSettings::class, 'updateAvailability'])->name('settings.availability');
 });
 
 // =====================================================

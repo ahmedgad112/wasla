@@ -29,8 +29,9 @@ class AuthController extends Controller
     public function customerLogin(Request $request): RedirectResponse
     {
         $request->validate([
-            'email'    => 'required|string',
+            'email' => 'required|string',
             'password' => 'required|string',
+            'remember' => 'sometimes|boolean',
         ]);
 
         $this->authService->authenticate(
@@ -51,22 +52,32 @@ class AuthController extends Controller
     public function customerRegister(Request $request): RedirectResponse
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'phone'    => 'nullable|string|max:20|unique:users,phone',
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|max:20|unique:users,phone',
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)->numbers()->symbols(),
+                'regex:/[A-Z]/',
+            ],
         ], [
             'email.unique' => 'البريد الإلكتروني مسجل مسبقاً لدى مستخدم آخر.',
             'phone.unique' => 'رقم الهاتف مسجل مسبقاً لدى مستخدم آخر.',
+            'password.confirmed' => 'تأكيد كلمة المرور غير مطابق.',
+            'password.min' => 'كلمة المرور يجب ألا تقل عن 8 أحرف.',
+            'password.numbers' => 'كلمة المرور لازم فيها رقم على الأقل.',
+            'password.symbols' => 'كلمة المرور لازم فيها رمز على الأقل (مثل @ أو # أو !).',
+            'password.regex' => 'كلمة المرور لازم فيها حرف كبير (Capital) على الأقل.',
         ]);
 
         $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'phone'    => $request->phone,
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
             'password' => Hash::make($request->password),
-            'role'     => 'CUSTOMER',
-            'is_active'=> true,
+            'role' => 'CUSTOMER',
+            'is_active' => true,
         ]);
 
         // Create Customer profile
@@ -95,7 +106,7 @@ class AuthController extends Controller
     public function adminLogin(Request $request): RedirectResponse
     {
         $request->validate([
-            'email'    => 'required|string',
+            'email' => 'required|string',
             'password' => 'required|string',
         ]);
 
@@ -121,7 +132,7 @@ class AuthController extends Controller
     public function restaurantLogin(Request $request): RedirectResponse
     {
         $request->validate([
-            'email'    => 'required|string',
+            'email' => 'required|string',
             'password' => 'required|string',
         ]);
 
@@ -147,7 +158,7 @@ class AuthController extends Controller
     public function deliveryLogin(Request $request): RedirectResponse
     {
         $request->validate([
-            'email'    => 'required|string',
+            'email' => 'required|string',
             'password' => 'required|string',
         ]);
 
@@ -175,9 +186,9 @@ class AuthController extends Controller
         // Redirect to appropriate login page based on role
         return match (true) {
             in_array($role, ['SUPER_ADMIN', 'ADMIN', 'PLATFORM_STAFF']) => redirect()->route('admin.login'),
-            in_array($role, ['RESTAURANT_OWNER', 'RESTAURANT_STAFF'])    => redirect()->route('restaurant.login'),
-            $role === 'DELIVERY_DRIVER'                                  => redirect()->route('delivery.login'),
-            default                                                      => redirect()->route('login'),
+            in_array($role, ['RESTAURANT_OWNER', 'RESTAURANT_STAFF']) => redirect()->route('restaurant.login'),
+            $role === 'DELIVERY_DRIVER' => redirect()->route('delivery.login'),
+            default => redirect()->route('login'),
         };
     }
 }

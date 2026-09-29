@@ -2,21 +2,18 @@
   animation: pulseGlow 2.5s infinite;
 }
 
-/* Admin control room — platform only */
+/* =====================================================
+   Admin shell — light stone / orange (matches Orders UI)
+   ===================================================== */
 .admin-shell {
-    background:
-        radial-gradient(circle at 12% -8%, rgba(34, 211, 238, .16), transparent 22rem),
-        radial-gradient(circle at 100% 100%, rgba(14, 165, 233, .12), transparent 24rem),
-        #07111f;
-    color: #e2e8f0;
+    background: #fafaf9;
+    color: #1c1917;
 }
 
-.admin-grid { min-height: 100vh; }
-
 .admin-rail {
-    background: linear-gradient(180deg, #0b1c33 0%, #07111f 100%);
-    border-left: 1px solid rgba(125, 211, 252, .16);
-    box-shadow: -20px 0 40px rgba(2, 8, 23, .35);
+    background: #ffffff;
+    border-inline-end: 1px solid #e7e5e4;
+    box-shadow: 0 0 0 1px rgba(28, 25, 23, .03), 8px 0 28px rgba(28, 25, 23, .06);
 }
 
 .admin-brand {
@@ -24,30 +21,46 @@
     align-items: center;
     gap: .9rem;
     padding: 1.4rem 1.25rem 1.1rem;
-    color: #f8fafc;
+    color: #1c1917;
     text-decoration: none;
+    border-bottom: 1px solid #f5f5f4;
 }
 
 .admin-brand strong { display: block; font-size: .95rem; letter-spacing: -.02em; }
-.admin-brand small { display: block; margin-top: .15rem; color: #7dd3fc; font-size: .68rem; font-weight: 700; }
+.admin-brand small {
+    display: block;
+    margin-top: .15rem;
+    color: #f97316;
+    font-size: .68rem;
+    font-weight: 700;
+}
 
 .admin-mark {
     width: 2.6rem;
     height: 2.6rem;
     display: grid;
     place-items: center;
+    overflow: hidden;
+    padding: 0;
     border-radius: 1rem;
-    background: linear-gradient(135deg, #22d3ee, #0284c7);
-    color: #082f49;
+    background: #0a0a0a;
+    color: #ffffff;
     font-size: 1.2rem;
     font-weight: 900;
+    box-shadow: 0 8px 18px rgba(249, 115, 22, .28);
+}
+
+.admin-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .admin-nav { flex: 1; overflow: auto; padding: .4rem 1rem 1rem; }
 .admin-nav-group { margin-bottom: 1.1rem; }
 .admin-nav-group > p {
     margin: 0 0 .45rem .35rem;
-    color: #64748b;
+    color: #a8a29e;
     font-size: .62rem;
     font-weight: 800;
     letter-spacing: .18em;
@@ -60,18 +73,22 @@
     margin-bottom: .2rem;
     padding: .7rem .8rem;
     border-radius: .9rem;
-    color: #94a3b8;
+    color: #57534e;
     font-size: .8rem;
     font-weight: 700;
     text-decoration: none;
     border: 1px solid transparent;
 }
 
-.admin-link:hover { color: #e2e8f0; background: rgba(148, 163, 184, .08); }
+.admin-link:hover {
+    color: #1c1917;
+    background: #f5f5f4;
+}
+
 .admin-link.is-active {
-    color: #ecfeff;
-    background: linear-gradient(90deg, rgba(6, 182, 212, .22), rgba(14, 165, 233, .08));
-    border-color: rgba(103, 232, 249, .2);
+    color: #ea580c;
+    background: #fff7ed;
+    border-color: #fed7aa;
 }
 
 .admin-user {
@@ -79,7 +96,8 @@
     align-items: center;
     gap: .75rem;
     padding: 1rem;
-    border-top: 1px solid rgba(125, 211, 252, .12);
+    border-top: 1px solid #e7e5e4;
+    background: #fafaf9;
 }
 
 .admin-avatar {
@@ -88,8 +106,8 @@
     display: grid;
     place-items: center;
     border-radius: .85rem;
-    background: #164e63;
-    color: #a5f3fc;
+    background: #f97316;
+    color: #ffffff;
     font-weight: 800;
 }
 
@@ -99,8 +117,8 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid rgba(125, 211, 252, .12);
-    background: rgba(7, 17, 31, .82);
+    border-bottom: 1px solid #e7e5e4;
+    background: rgba(255, 255, 255, .92);
     backdrop-filter: blur(16px);
     position: sticky;
     top: 0;
@@ -109,7 +127,7 @@
 
 .admin-kicker {
     margin: 0;
-    color: #22d3ee;
+    color: #f97316;
     font-size: .65rem;
     font-weight: 800;
     letter-spacing: .16em;
@@ -123,60 +141,118 @@
     min-height: 2.4rem;
     padding: 0 .8rem;
     border-radius: .85rem;
-    border: 1px solid rgba(148, 163, 184, .18);
-    background: rgba(15, 23, 42, .7);
-    color: #cbd5e1;
+    border: 1px solid #e7e5e4;
+    background: #f5f5f4;
+    color: #44403c;
 }
 
-.admin-chip { font-size: .72rem; font-weight: 700; text-decoration: none; }
+.admin-chip {
+    font-size: .72rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-chip:hover {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #ea580c;
+}
+
 .admin-flash { padding: .8rem 1.25rem; font-size: .8rem; font-weight: 700; }
-.admin-flash.is-success { background: #065f46; color: #d1fae5; }
-.admin-flash.is-error { background: #991b1b; color: #fee2e2; }
+.admin-flash.is-success { background: #d1fae5; color: #065f46; }
+.admin-flash.is-error { background: #fee2e2; color: #991b1b; }
 
 .admin-workspace {
     padding: 1.25rem clamp(1rem, 3vw, 2.5rem) 2.5rem;
     max-width: none;
 }
 
-.admin-workspace [class*="bg-white"],
-.admin-workspace [class*="bg-stone-50"],
-.admin-workspace [class*="bg-stone-100"] {
-    background-color: #102033 !important;
-    border-color: rgba(125, 211, 252, .12) !important;
-}
-
-.admin-workspace [class*="text-stone-900"],
-.admin-workspace [class*="text-stone-800"],
-.admin-workspace [class*="text-stone-700"] { color: #f8fafc !important; }
-.admin-workspace [class*="text-stone-600"],
-.admin-workspace [class*="text-stone-500"],
-.admin-workspace [class*="text-stone-400"] { color: #94a3b8 !important; }
-.admin-workspace [class*="border-stone"] { border-color: rgba(125, 211, 252, .12) !important; }
-
-.admin-workspace table thead th {
-    background: #16324d !important;
-    color: #67e8f9 !important;
-}
-
-.admin-workspace table tbody td,
-.admin-workspace table tbody tr { background: #102033 !important; color: #e2e8f0 !important; }
-
-.admin-workspace input,
+/* Inputs / selects inside admin & restaurant portals */
+.admin-workspace input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .admin-workspace select,
-.admin-workspace textarea {
-    background: #0b1a2c !important;
-    color: #f8fafc !important;
-    border-color: rgba(125, 211, 252, .16) !important;
+.admin-workspace textarea,
+.restaurant-workspace input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.restaurant-workspace select,
+.restaurant-workspace textarea {
+    background-color: #fafaf9;
+    color: #1c1917;
+    border-color: #e7e5e4;
 }
 
-/* Restaurant kitchen pass — restaurant dashboard only */
+.admin-workspace input:focus,
+.admin-workspace select:focus,
+.admin-workspace textarea:focus,
+.restaurant-workspace input:focus,
+.restaurant-workspace select:focus,
+.restaurant-workspace textarea:focus {
+    outline: none;
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .15);
+}
+
+.admin-workspace label,
+.restaurant-workspace label {
+    color: #57534e;
+}
+
+/* Admin dark mode (optional toggle) */
+.dark .admin-shell {
+    background: #0c0a09;
+    color: #f5f5f4;
+}
+
+.dark .admin-rail {
+    background: #1c1917;
+    border-inline-end-color: #292524;
+    box-shadow: none;
+}
+
+.dark .admin-brand {
+    color: #f5f5f4;
+    border-bottom-color: #292524;
+}
+
+.dark .admin-brand small { color: #fb923c; }
+
+.dark .admin-link { color: #a8a29e; }
+.dark .admin-link:hover {
+    color: #f5f5f4;
+    background: #292524;
+}
+
+.dark .admin-link.is-active {
+    color: #fb923c;
+    background: rgba(249, 115, 22, .12);
+    border-color: rgba(249, 115, 22, .25);
+}
+
+.dark .admin-user {
+    border-top-color: #292524;
+    background: #0c0a09;
+}
+
+.dark .admin-topbar {
+    background: rgba(28, 25, 23, .92);
+    border-bottom-color: #292524;
+}
+
+.dark .admin-icon-btn,
+.dark .admin-chip {
+    border-color: #44403c;
+    background: #292524;
+    color: #d6d3d1;
+}
+
+.dark .admin-flash.is-success { background: #065f46; color: #d1fae5; }
+.dark .admin-flash.is-error { background: #991b1b; color: #fee2e2; }
+
+/* =====================================================
+   Restaurant shell — light stone / orange (matches Orders)
+   ===================================================== */
 .restaurant-shell {
     min-height: 100vh;
-    background:
-        radial-gradient(circle at 90% -10%, rgba(251, 146, 60, .18), transparent 22rem),
-        repeating-linear-gradient(0deg, rgba(180, 83, 9, .04), rgba(180, 83, 9, .04) 1px, transparent 1px, transparent 28px),
-        #fff4e8;
-    color: #3b2416;
+    background: #fafaf9;
+    color: #1c1917;
 }
 
 .kitchen-mast {
@@ -185,8 +261,12 @@
     justify-content: space-between;
     gap: 1rem;
     padding: .9rem 1.1rem;
-    background: #fffaf3;
-    border-bottom: 3px dashed #edc8a3;
+    background: rgba(255, 255, 255, .95);
+    border-bottom: 1px solid #e7e5e4;
+    backdrop-filter: blur(16px);
+    position: sticky;
+    top: 0;
+    z-index: 30;
 }
 
 .kitchen-seal {
@@ -194,16 +274,16 @@
     height: 2.6rem;
     display: grid;
     place-items: center;
-    border-radius: 999px;
-    background: #ea580c;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #f97316, #f59e0b);
     color: white;
     font-weight: 900;
-    box-shadow: 0 8px 18px rgba(234, 88, 12, .28);
+    box-shadow: 0 8px 18px rgba(249, 115, 22, .28);
 }
 
 .kitchen-kicker {
     margin: 0;
-    color: #c2410c;
+    color: #f97316;
     font-size: .62rem;
     font-weight: 900;
     letter-spacing: .18em;
@@ -216,9 +296,15 @@
     width: 2.4rem;
     height: 2.4rem;
     border-radius: .8rem;
-    border: 1px solid #edc8a3;
+    border: 1px solid #e7e5e4;
+    background: #f5f5f4;
+    color: #44403c;
+}
+
+.kitchen-icon-btn:hover {
     background: #fff7ed;
-    color: #7c2d12;
+    border-color: #fed7aa;
+    color: #ea580c;
 }
 
 .kitchen-status {
@@ -245,7 +331,8 @@
     gap: .4rem;
     overflow-x: auto;
     padding: .7rem 1rem;
-    background: #3b2416;
+    background: #ffffff;
+    border-bottom: 1px solid #e7e5e4;
 }
 
 .kitchen-tab {
@@ -254,19 +341,28 @@
     gap: .4rem;
     white-space: nowrap;
     padding: .65rem .9rem;
-    border-radius: 999px;
-    color: #fde7d1;
+    border-radius: .9rem;
+    color: #57534e;
     font-size: .78rem;
     font-weight: 800;
     text-decoration: none;
+    border: 1px solid transparent;
 }
 
-.kitchen-tab:hover { background: rgba(255,255,255,.08); }
-.kitchen-tab.is-active { background: #ea580c; color: white; }
+.kitchen-tab:hover {
+    background: #f5f5f4;
+    color: #1c1917;
+}
+
+.kitchen-tab.is-active {
+    background: #fff7ed;
+    color: #ea580c;
+    border-color: #fed7aa;
+}
 
 .kitchen-flash { padding: .75rem 1.1rem; font-size: .8rem; font-weight: 800; }
-.kitchen-flash.is-success { background: #166534; color: #dcfce7; }
-.kitchen-flash.is-error { background: #991b1b; color: #fee2e2; }
+.kitchen-flash.is-success { background: #d1fae5; color: #065f46; }
+.kitchen-flash.is-error { background: #fee2e2; color: #991b1b; }
 
 .kitchen-pass {
     padding: 1.1rem clamp(1rem, 3vw, 2rem) 2.4rem;
@@ -277,24 +373,56 @@
     margin: 0 0 1rem;
     padding: .3rem .7rem;
     border-radius: 999px;
-    background: #ffedd5;
-    color: #9a3412;
+    background: #fff7ed;
+    color: #c2410c;
     font-size: .7rem;
     font-weight: 900;
+    border: 1px solid #fed7aa;
 }
 
 .restaurant-workspace { max-width: none; }
 
+/* Restaurant dark mode (optional toggle) */
 .dark .restaurant-shell {
-    background: #1c140f;
-    color: #fff7ed;
+    background: #0c0a09;
+    color: #f5f5f4;
 }
 
 .dark .kitchen-mast {
-    background: #241910;
-    border-bottom-color: #5c4030;
+    background: rgba(28, 25, 23, .95);
+    border-bottom-color: #292524;
 }
 
-.dark .kitchen-mast h1 { color: #fff7ed !important; }
-.dark .kitchen-tabs { background: #140e0a; }
-.dark .kitchen-station { background: #431407; color: #fdba74; }
+.dark .kitchen-mast h1 { color: #fafaf9 !important; }
+
+.dark .kitchen-icon-btn {
+    border-color: #44403c;
+    background: #292524;
+    color: #d6d3d1;
+}
+
+.dark .kitchen-tabs {
+    background: #1c1917;
+    border-bottom-color: #292524;
+}
+
+.dark .kitchen-tab { color: #a8a29e; }
+.dark .kitchen-tab:hover {
+    background: #292524;
+    color: #f5f5f4;
+}
+
+.dark .kitchen-tab.is-active {
+    background: rgba(249, 115, 22, .15);
+    color: #fb923c;
+    border-color: rgba(249, 115, 22, .3);
+}
+
+.dark .kitchen-station {
+    background: rgba(249, 115, 22, .12);
+    color: #fdba74;
+    border-color: rgba(249, 115, 22, .25);
+}
+
+.dark .kitchen-flash.is-success { background: #065f46; color: #d1fae5; }
+.dark .kitchen-flash.is-error { background: #991b1b; color: #fee2e2; }

@@ -1,5 +1,5 @@
 // =====================================================
-// فطرنا شكراً — Global TypeScript Types
+// وصلة — Global TypeScript Types
 // =====================================================
 
 export interface User {
@@ -24,6 +24,7 @@ export type UserRole =
     | 'CUSTOMER';
 
 export type RestaurantStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
+export type AvailabilityStatus = 'OPEN' | 'BUSY' | 'CLOSED';
 export type CommissionType = 'PERCENTAGE' | 'FIXED' | 'SUBSCRIPTION' | 'HYBRID' | 'NONE';
 
 export interface Restaurant {
@@ -40,12 +41,16 @@ export interface Restaurant {
     latitude?: number;
     longitude?: number;
     status: RestaurantStatus;
+    availability_status?: AvailabilityStatus;
+    availability_label?: string;
     opening_time?: string;
     closing_time?: string;
     minimum_order_amount: number;
     delivery_fee: number;
     delivery_base_fee?: number;
     delivery_fee_per_km?: number;
+    delivery_provider?: 'PLATFORM' | 'RESTAURANT' | 'PICKUP';
+    delivery_enabled?: boolean;
     estimated_delivery_time?: number;
     student_discount_percentage: number;
     commission_type: CommissionType;
@@ -391,6 +396,8 @@ export interface SharedProps extends Record<string, unknown> {
         name: string;
         status: RestaurantStatus;
         logo?: string | null;
+        availability_status?: AvailabilityStatus;
+        is_open?: boolean;
     } | null;
     errors: Record<string, string>;
 }

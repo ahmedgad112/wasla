@@ -3,9 +3,16 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Models\DeliveryDriver;
+use App\Models\MenuItem;
 use App\Models\Offer;
+use App\Models\Order;
 use App\Models\Restaurant;
 use App\Services\LandingCmsService;
+use App\Services\PublicCatalogCache;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,98 +22,113 @@ class PublicController extends Controller
 
     public function home(): Response
     {
-        // Load active offers with restaurant info
-        $activeOffers = Offer::with(['restaurant:id,name,slug,logo'])
-            ->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('start_date')->orWhere('start_date', '<=', now());
-            })
-            ->where(function ($q) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', now());
-            })
-            ->latest()
-            ->take(12)
-            ->get();
+        $activeOffers = Cache::remember(PublicCatalogCache::ACTIVE_OFFERS, 60, function () {
+            return Offer::with(['restaurant:id,name,slug,logo'])
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', now());
+                })
+                ->where(function ($q) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', now());
+                })
+                ->latest()
+                ->take(12)
+                ->get();
+        });
 
-        // Restaurants with item counts for landing page
-        $restaurants = Restaurant::whereIn('status', ['ACTIVE', 'SUSPENDED'])
-            ->select([
-                'id', 'name', 'slug', 'logo', 'cover_image', 'description',
-                'phone', 'address', 'delivery_fee', 'estimated_delivery_time',
-                'minimum_order_amount', 'student_discount_percentage',
-                'opening_time', 'closing_time', 'status'
-            ])
-            ->withCount(['menuItems' => fn($q) => $q->where('is_available', true)])
-            ->withCount(['offers' => fn($q) => $q->where('is_active', true)])
-            ->orderByRaw("CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END")
-            ->latest()
-            ->get();
+        $restaurants = Cache::remember(PublicCatalogCache::FEATURED_RESTAURANTS, 60, function () {
+            return Restaurant::query()
+                ->whereIn('status', ['ACTIVE', 'SUSPENDED'])
+                ->select([
+                    'id', 'name', 'slug', 'logo', 'cover_image', 'description',
+                    'phone', 'address', 'delivery_fee', 'estimated_delivery_time',
+                    'minimum_order_amount', 'student_discount_percentage',
+                    'opening_time', 'closing_time', 'status', 'availability_status',
+                    'delivery_provider', 'delivery_enabled',
+                ])
+                ->withCount(['menuItems' => fn ($q) => $q->where('is_available', true)])
+                ->withCount(['offers' => fn ($q) => $q->where('is_active', true)])
+                ->orderByRaw("CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END")
+                ->latest()
+                ->get();
+        });
 
-        // Total available food items
-        $totalDishes = \App\Models\MenuItem::where('is_available', true)->count();
+        $stats = Cache::remember(PublicCatalogCache::STATS, 120, function () {
+            $totalDishes = MenuItem::where('is_available', true)->count();
 
-        // Leaderboard preview data
-        $leaderboard = [
-            'rankings' => [
-                [
+            return [
+                'restaurants' => Restaurant::where('status', 'ACTIVE')->count(),
+                'orders' => Order::where('status', 'DELIVERED')->count(),
+                'drivers' => DeliveryDriver::where('is_active', true)->count(),
+                'customers' => Customer::count(),
+                'totalDishes' => $totalDishes,
+            ];
+        });
+
+        $leaderboard = Cache::remember(PublicCatalogCache::HOME_LEADERBOARD, 300, function () use ($stats) {
+            $totalDishes = $stats['totalDishes'];
+
+            return [
+                'rankings' => [
+                    [
+                        'userId' => 1,
+                        'userName' => 'زياد طارق (طالب تكنولوجية برج العرب)',
+                        'badge' => 'ملك الفطار 👑',
+                        'totalOrders' => 42,
+                        'totalItems' => 118,
+                    ],
+                    [
+                        'userId' => 2,
+                        'userName' => 'مصطفى حسني (فريق إدارة التقديمات)',
+                        'badge' => 'عاشق السندوتشات 🥪',
+                        'totalOrders' => 35,
+                        'totalItems' => 94,
+                    ],
+                    [
+                        'userId' => 3,
+                        'userName' => 'محمد عادل (كلية تكنولوجيا الصناعة)',
+                        'badge' => 'عميد الفطار 🥇',
+                        'totalOrders' => 28,
+                        'totalItems' => 76,
+                    ],
+                ],
+                'kingOfBreakfast' => [
                     'userId' => 1,
                     'userName' => 'زياد طارق (طالب تكنولوجية برج العرب)',
                     'badge' => 'ملك الفطار 👑',
                     'totalOrders' => 42,
                     'totalItems' => 118,
                 ],
-                [
-                    'userId' => 2,
-                    'userName' => 'مصطفى حسني (فريق إدارة التقديمات)',
-                    'badge' => 'عاشق السندوتشات 🥪',
-                    'totalOrders' => 35,
-                    'totalItems' => 94,
-                ],
-                [
-                    'userId' => 3,
-                    'userName' => 'محمد عادل (كلية تكنولوجيا الصناعة)',
-                    'badge' => 'عميد الفطار 🥇',
-                    'totalOrders' => 28,
-                    'totalItems' => 76,
-                ],
-            ],
-            'kingOfBreakfast' => [
-                'userId' => 1,
-                'userName' => 'زياد طارق (طالب تكنولوجية برج العرب)',
-                'badge' => 'ملك الفطار 👑',
-                'totalOrders' => 42,
-                'totalItems' => 118,
-            ],
-            'totalOrdersInSystem' => max(144, \App\Models\Order::count()),
-            'totalItemsInSystem' => max(384, $totalDishes * 4),
-        ];
-
-        // CMS / system settings for the landing page
-        $cms = $this->cmsService->getPublicSettings();
-
-        // Platform statistics
-        $stats = [
-            'restaurants' => Restaurant::where('status', 'ACTIVE')->count(),
-            'orders'      => \App\Models\Order::where('status', 'DELIVERED')->count(),
-            'drivers'     => \App\Models\DeliveryDriver::where('is_active', true)->count(),
-            'customers'   => \App\Models\Customer::count(),
-            'totalDishes' => $totalDishes,
-        ];
+                'totalOrdersInSystem' => max(144, Order::count()),
+                'totalItemsInSystem' => max(384, $totalDishes * 4),
+            ];
+        });
 
         return Inertia::render('Public/Home', [
-            'restaurants'        => $restaurants,
-            'featuredRestaurants'=> $restaurants,
-            'totalDishes'        => $totalDishes,
-            'activeOffers'       => $activeOffers,
-            'leaderboard'        => $leaderboard,
-            'cms'                => $cms,
-            'stats'              => $stats,
+            'restaurants' => $restaurants,
+            'featuredRestaurants' => $restaurants,
+            'totalDishes' => $stats['totalDishes'],
+            'activeOffers' => $activeOffers,
+            'leaderboard' => $leaderboard,
+            'cms' => $this->cmsService->getPublicSettings(),
+            'stats' => $stats,
         ]);
     }
 
     public function leaderboard(): Response
     {
-        $totalDishes = \App\Models\MenuItem::where('is_available', true)->count();
+        $stats = Cache::remember(PublicCatalogCache::STATS, 120, function () {
+            $totalDishes = MenuItem::where('is_available', true)->count();
+
+            return [
+                'restaurants' => Restaurant::where('status', 'ACTIVE')->count(),
+                'orders' => Order::where('status', 'DELIVERED')->count(),
+                'drivers' => DeliveryDriver::where('is_active', true)->count(),
+                'customers' => Customer::count(),
+                'totalDishes' => $totalDishes,
+            ];
+        });
+
         $leaderboard = [
             'rankings' => [
                 [
@@ -152,8 +174,8 @@ class PublicController extends Controller
                 'totalOrders' => 42,
                 'totalItems' => 118,
             ],
-            'totalOrdersInSystem' => max(144, \App\Models\Order::count()),
-            'totalItemsInSystem' => max(384, $totalDishes * 4),
+            'totalOrdersInSystem' => max(144, Order::count()),
+            'totalItemsInSystem' => max(384, $stats['totalDishes'] * 4),
         ];
 
         return Inertia::render('Public/Leaderboard', [
@@ -164,10 +186,13 @@ class PublicController extends Controller
     public function restaurants(): Response
     {
         $restaurants = Restaurant::whereIn('status', ['ACTIVE', 'SUSPENDED'])
-            ->select(['id', 'name', 'slug', 'logo', 'cover_image', 'description',
+            ->select([
+                'id', 'name', 'slug', 'logo', 'cover_image', 'description',
                 'delivery_fee', 'estimated_delivery_time', 'minimum_order_amount',
-                'opening_time', 'closing_time', 'address', 'status', 'student_discount_percentage', 'phone'])
-            ->withCount(['offers' => fn($q) => $q->where('is_active', true)])
+                'opening_time', 'closing_time', 'address', 'status', 'availability_status',
+                'student_discount_percentage', 'phone', 'delivery_provider', 'delivery_enabled',
+            ])
+            ->withCount(['offers' => fn ($q) => $q->where('is_active', true)])
             ->orderByRaw("CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END")
             ->latest()
             ->paginate(12);
@@ -177,28 +202,58 @@ class PublicController extends Controller
         ]);
     }
 
+    /**
+     * Lightweight poll endpoint so customers see open/busy/closed changes quickly.
+     */
+    public function availabilityStatuses(): JsonResponse
+    {
+        $restaurants = Cache::remember(PublicCatalogCache::AVAILABILITY, 5, function () {
+            return Restaurant::query()
+                ->whereIn('status', ['ACTIVE', 'SUSPENDED'])
+                ->orderBy('id')
+                ->get(['id', 'status', 'availability_status']);
+        });
+
+        return response()
+            ->json(['restaurants' => $restaurants])
+            ->header('Cache-Control', 'public, max-age=5');
+    }
+
     public function restaurantDetails(string $slug): Response
     {
-        $restaurant = Restaurant::where('slug', $slug)
-            ->whereIn('status', ['ACTIVE', 'SUSPENDED'])
-            ->with([
-                'categories' => function ($q) {
-                    $q->where('is_active', true)
-                      ->orderBy('sort_order')
-                      ->with(['menuItems' => function ($q) {
-                          $q->where('is_available', true)
+        $restaurant = Cache::remember(PublicCatalogCache::restaurantKey($slug), 30, function () use ($slug) {
+            return Restaurant::where('slug', $slug)
+                ->whereIn('status', ['ACTIVE', 'SUSPENDED'])
+                ->with([
+                    'categories' => function ($q) {
+                        $q->where('is_active', true)
                             ->orderBy('sort_order')
-                            ->with(['options.values', 'addons']);
-                      }]);
-                },
-                'offers' => function ($q) {
-                    $q->where('is_active', true)
-                      ->where(function ($q) {
-                          $q->whereNull('end_date')->orWhere('end_date', '>=', now());
-                      });
-                },
-            ])
-            ->firstOrFail();
+                            ->select(['id', 'restaurant_id', 'name', 'slug', 'image', 'sort_order', 'is_active'])
+                            ->with(['menuItems' => function ($q) {
+                                $q->where('is_available', true)
+                                    ->orderBy('sort_order')
+                                    ->select([
+                                        'id', 'restaurant_id', 'category_id', 'name', 'description',
+                                        'price', 'discount_price', 'image', 'is_available',
+                                        'is_featured', 'preparation_time', 'sort_order',
+                                    ])
+                                    ->with([
+                                        'options:id,menu_item_id,name,is_required',
+                                        'options.values:id,menu_item_option_id,name,price',
+                                        'addons:id,menu_item_id,name,price,is_available',
+                                    ]);
+                            }]);
+                    },
+                    'offers' => function ($q) {
+                        $q->where('is_active', true)
+                            ->where(function ($q) {
+                                $q->whereNull('end_date')->orWhere('end_date', '>=', now());
+                            });
+                    },
+                ])
+                ->firstOrFail()
+                ->toArray();
+        });
 
         return Inertia::render('Public/RestaurantDetails', [
             'restaurant' => $restaurant,

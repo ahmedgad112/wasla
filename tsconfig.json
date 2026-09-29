@@ -3,16 +3,18 @@
         "target": "ESNext",
         "module": "ESNext",
         "moduleResolution": "bundler",
-        "jsx": "react-jsx",
         "strict": true,
+        "jsx": "preserve",
+        "jsxImportSource": "vue",
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "baseUrl": ".",
+        "isolatedModules": true,
+        "resolveJsonModule": true,
         "paths": {
-            "@/*": ["resources/js/*"]
+            "@/*": ["./resources/js/*"]
         },
         "types": ["node", "vite/client"]
     },
-    "include": ["resources/js/**/*"],
+    "include": ["resources/js/**/*.ts", "resources/js/**/*.vue", "resources/js/**/*.d.ts"],
     "exclude": ["node_modules", "public", "vendor", "فطارنى", "storage", ".next"]
 }

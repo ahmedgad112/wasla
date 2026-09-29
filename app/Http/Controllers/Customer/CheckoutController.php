@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
+use App\Models\Customer;
 use App\Models\Restaurant;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +18,7 @@ class CheckoutController extends Controller
     public function index(): Response
     {
         $user = auth()->user();
-        $customer = $user->customer ?? \App\Models\Customer::firstOrCreate(
+        $customer = $user->customer ?? Customer::firstOrCreate(
             ['user_id' => $user->id],
             ['student_status' => 'PENDING']
         );
@@ -26,7 +26,7 @@ class CheckoutController extends Controller
         $addresses = $customer->addresses()->get();
 
         return Inertia::render('Customer/Checkout', [
-            'customer'  => $customer,
+            'customer' => $customer,
             'addresses' => $addresses,
         ]);
     }
@@ -34,37 +34,53 @@ class CheckoutController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = auth()->user();
-        $customer = $user->customer ?? \App\Models\Customer::firstOrCreate(
+        $customer = $user->customer ?? Customer::firstOrCreate(
             ['user_id' => $user->id],
             ['student_status' => 'PENDING']
         );
 
         // Normalize payload fields in case called from Cart or Checkout modal
-        if (!$request->has('address') && $request->filled('delivery_address')) {
+        if (! $request->has('address') && $request->filled('delivery_address')) {
             $request->merge(['address' => $request->input('delivery_address')]);
         }
-        if (!$request->has('payment_method')) {
+        if (! $request->has('payment_method')) {
             $request->merge(['payment_method' => 'CASH_ON_DELIVERY']);
         }
-        if (!$request->has('customer_notes') && $request->filled('notes')) {
+        if (! $request->has('customer_notes') && $request->filled('notes')) {
             $request->merge(['customer_notes' => $request->input('notes')]);
         }
 
         $validated = $request->validate([
-            'restaurant_id'  => 'required|integer|exists:restaurants,id',
-            'items'          => 'required|array|min:1',
+            'restaurant_id' => 'required|integer|exists:restaurants,id',
+            'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|integer',
-            'items.*.quantity'     => 'required|integer|min:1|max:20',
-            'items.*.options'      => 'nullable|array',
-            'items.*.addons'       => 'nullable|array',
-            'items.*.notes'        => 'nullable|string|max:255',
-            'address'        => 'required|string|max:500',
-            'latitude'       => 'nullable|numeric',
-            'longitude'      => 'nullable|numeric',
-            'delivery_fee'   => 'nullable|numeric|min:0',
+            'items.*.quantity' => 'required|integer|min:1|max:20',
+            'items.*.options' => 'nullable|array',
+            'items.*.addons' => 'nullable|array',
+            'items.*.notes' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:500',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'delivery_fee' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:CASH_ON_DELIVERY',
             'customer_notes' => 'nullable|string|max:500',
         ]);
+
+        $restaurant = Restaurant::findOrFail($validated['restaurant_id']);
+
+        if (! $restaurant->isPickupOnly() && blank($validated['address'] ?? null)) {
+            return back()->withErrors([
+                'address' => 'عنوان التوصيل مطلوب.',
+            ])->withInput();
+        }
+
+        if ($restaurant->isPickupOnly()) {
+            $validated['address'] = $validated['address']
+                ?: ('استلام من المطعم — '.($restaurant->address ?: $restaurant->name));
+            $validated['delivery_fee'] = 0;
+            $validated['latitude'] = $restaurant->latitude;
+            $validated['longitude'] = $restaurant->longitude;
+        }
 
         $order = $this->orderService->createOrder($customer, $validated);
 

@@ -1,9 +1,8 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { MenuItem, MenuItemOptionValue, MenuItemAddon, Restaurant } from '../Types';
+import { defineStore } from 'pinia';
+import type { MenuItem, MenuItemAddon, Restaurant } from '../Types';
 
 export interface CartItem {
-    id: string; // unique item instance id: `${menuItem.id}-${optionsHash}`
+    id: string;
     menuItem: MenuItem;
     quantity: number;
     selectedOptions: {
@@ -23,187 +22,159 @@ interface CartState {
     studentDiscountApplied: boolean;
     studentDiscountPercentage: number;
     isCartOpen: boolean;
-    
-    // Actions
-    addItem: (
-        item: MenuItem,
-        restaurant: Restaurant,
-        quantity?: number,
-        selectedOptions?: { optionName: string; valueName: string; price: number }[],
-        selectedAddons?: MenuItemAddon[],
-        notes?: string
-    ) => boolean; // returns false if conflict with existing restaurant
-    
-    removeItem: (itemId: string) => void;
-    updateQuantity: (itemId: string, quantity: number) => void;
-    clearCart: () => void;
-    
-    setStudentDiscount: (percentage: number) => void;
-    setIsCartOpen: (open: boolean) => void;
-    openCart: () => void;
-    closeCart: () => void;
-    
-    // Calculations
-    getSubtotal: () => number;
-    getStudentDiscountAmount: () => number;
-    getDeliveryFee: () => number;
-    getTotal: () => number;
-    getItemCount: () => number;
 }
 
-export const useCartStore = create<CartState>()(
-    persist(
-        (set, get) => ({
-            restaurant: null,
-            items: [],
-            studentDiscountApplied: false,
-            studentDiscountPercentage: 0,
-            isCartOpen: false,
+export const useCartStore = defineStore('cart', {
+    state: (): CartState => ({
+        restaurant: null,
+        items: [],
+        studentDiscountApplied: false,
+        studentDiscountPercentage: 0,
+        isCartOpen: false,
+    }),
 
-            setIsCartOpen: (isCartOpen: boolean) => set({ isCartOpen }),
-            openCart: () => set({ isCartOpen: true }),
-            closeCart: () => set({ isCartOpen: false }),
+    getters: {
+        getSubtotal: (state): number =>
+            state.items.reduce((sum, item) => sum + item.totalPrice, 0),
 
-            addItem: (
-                item: MenuItem,
-                restaurant: Restaurant,
-                quantity = 1,
-                selectedOptions = [],
-                selectedAddons = [],
-                notes = ''
-            ) => {
-                const currentRestaurant = get().restaurant;
+        getStudentDiscountAmount(): number {
+            if (!this.studentDiscountApplied || this.studentDiscountPercentage <= 0) {
+                return 0;
+            }
 
-                // Single restaurant policy
-                if (currentRestaurant && currentRestaurant.id !== restaurant.id) {
-                    return false; // Signals caller to confirm reset
-                }
+            return Number(((this.getSubtotal * this.studentDiscountPercentage) / 100).toFixed(2));
+        },
 
-                const optionsPrice = selectedOptions.reduce((acc, opt) => acc + (Number(opt.price) || 0), 0);
-                const addonsPrice = selectedAddons.reduce((acc, add) => acc + (Number(add.price) || 0), 0);
-                const basePrice = Number(item.effective_price ?? item.discount_price ?? item.price);
-                const unitPrice = basePrice + optionsPrice + addonsPrice;
+        getDeliveryFee: (state): number => {
+            if (state.items.length === 0 || !state.restaurant) {
+                return 0;
+            }
 
-                // Create a deterministic key for the specific configuration
-                const optionsKey = selectedOptions
-                    .map((o) => `${o.optionName}:${o.valueName}`)
-                    .sort()
-                    .join('|');
-                const addonsKey = selectedAddons
-                    .map((a) => a.id)
-                    .sort()
-                    .join('|');
-                const itemKey = `${item.id}_${optionsKey}_${addonsKey}_${notes.trim()}`;
+            if (state.restaurant.delivery_provider === 'PICKUP') {
+                return 0;
+            }
 
-                const existingIndex = get().items.findIndex((i) => i.id === itemKey);
+            return Number(state.restaurant.delivery_fee) || 0;
+        },
 
-                if (existingIndex > -1) {
-                    const updatedItems = [...get().items];
-                    const existingItem = updatedItems[existingIndex];
-                    const newQty = existingItem.quantity + quantity;
-                    updatedItems[existingIndex] = {
-                        ...existingItem,
-                        quantity: newQty,
-                        totalPrice: unitPrice * newQty,
-                    };
-                    set({
-                        restaurant,
-                        items: updatedItems,
-                        studentDiscountPercentage: Number(restaurant.student_discount_percentage) || 0,
-                    });
-                } else {
-                    const newItem: CartItem = {
-                        id: itemKey,
-                        menuItem: item,
+        getTotal(): number {
+            return Math.max(0, this.getSubtotal - this.getStudentDiscountAmount + this.getDeliveryFee);
+        },
+
+        getItemCount: (state): number =>
+            state.items.reduce((count, item) => count + item.quantity, 0),
+    },
+
+    actions: {
+        setIsCartOpen(isCartOpen: boolean): void {
+            this.isCartOpen = isCartOpen;
+        },
+
+        openCart(): void {
+            this.isCartOpen = true;
+        },
+
+        closeCart(): void {
+            this.isCartOpen = false;
+        },
+
+        addItem(
+            item: MenuItem,
+            restaurant: Restaurant,
+            quantity = 1,
+            selectedOptions: { optionName: string; valueName: string; price: number }[] = [],
+            selectedAddons: MenuItemAddon[] = [],
+            notes = '',
+        ): boolean {
+            if (this.restaurant && this.restaurant.id !== restaurant.id) {
+                return false;
+            }
+
+            const optionsPrice = selectedOptions.reduce((acc, opt) => acc + (Number(opt.price) || 0), 0);
+            const addonsPrice = selectedAddons.reduce((acc, add) => acc + (Number(add.price) || 0), 0);
+            const basePrice = Number(item.effective_price ?? item.discount_price ?? item.price);
+            const unitPrice = basePrice + optionsPrice + addonsPrice;
+
+            const optionsKey = selectedOptions
+                .map((o) => `${o.optionName}:${o.valueName}`)
+                .sort()
+                .join('|');
+            const addonsKey = selectedAddons
+                .map((a) => a.id)
+                .sort()
+                .join('|');
+            const itemKey = `${item.id}_${optionsKey}_${addonsKey}_${notes.trim()}`;
+
+            const existingIndex = this.items.findIndex((i) => i.id === itemKey);
+
+            if (existingIndex > -1) {
+                const existingItem = this.items[existingIndex];
+                const newQty = existingItem.quantity + quantity;
+                this.items[existingIndex] = {
+                    ...existingItem,
+                    quantity: newQty,
+                    totalPrice: unitPrice * newQty,
+                };
+            } else {
+                this.items.push({
+                    id: itemKey,
+                    menuItem: item,
+                    quantity,
+                    selectedOptions,
+                    selectedAddons,
+                    notes,
+                    unitPrice,
+                    totalPrice: unitPrice * quantity,
+                });
+            }
+
+            this.restaurant = restaurant;
+            this.studentDiscountPercentage = Number(restaurant.student_discount_percentage) || 0;
+
+            return true;
+        },
+
+        removeItem(itemId: string): void {
+            this.items = this.items.filter((i) => i.id !== itemId);
+            if (this.items.length === 0) {
+                this.restaurant = null;
+            }
+        },
+
+        updateQuantity(itemId: string, quantity: number): void {
+            if (quantity <= 0) {
+                this.removeItem(itemId);
+                return;
+            }
+
+            this.items = this.items.map((item) => {
+                if (item.id === itemId) {
+                    return {
+                        ...item,
                         quantity,
-                        selectedOptions,
-                        selectedAddons,
-                        notes,
-                        unitPrice,
-                        totalPrice: unitPrice * quantity,
+                        totalPrice: item.unitPrice * quantity,
                     };
-                    set({
-                        restaurant,
-                        items: [...get().items, newItem],
-                        studentDiscountPercentage: Number(restaurant.student_discount_percentage) || 0,
-                    });
                 }
 
-                return true;
-            },
+                return item;
+            });
+        },
 
-            removeItem: (itemId: string) => {
-                const updatedItems = get().items.filter((i) => i.id !== itemId);
-                set({
-                    items: updatedItems,
-                    restaurant: updatedItems.length === 0 ? null : get().restaurant,
-                });
-            },
+        clearCart(): void {
+            this.restaurant = null;
+            this.items = [];
+            this.studentDiscountApplied = false;
+            this.studentDiscountPercentage = 0;
+        },
 
-            updateQuantity: (itemId: string, quantity: number) => {
-                if (quantity <= 0) {
-                    get().removeItem(itemId);
-                    return;
-                }
-                const updatedItems = get().items.map((item) => {
-                    if (item.id === itemId) {
-                        return {
-                            ...item,
-                            quantity,
-                            totalPrice: item.unitPrice * quantity,
-                        };
-                    }
-                    return item;
-                });
-                set({ items: updatedItems });
-            },
+        setStudentDiscount(percentage: number): void {
+            this.studentDiscountApplied = percentage > 0;
+            this.studentDiscountPercentage = percentage;
+        },
+    },
 
-            clearCart: () => {
-                set({
-                    restaurant: null,
-                    items: [],
-                    studentDiscountApplied: false,
-                    studentDiscountPercentage: 0,
-                });
-            },
-
-            setStudentDiscount: (percentage: number) => {
-                set({
-                    studentDiscountApplied: percentage > 0,
-                    studentDiscountPercentage: percentage,
-                });
-            },
-
-            getSubtotal: () => {
-                return get().items.reduce((sum, item) => sum + item.totalPrice, 0);
-            },
-
-            getStudentDiscountAmount: () => {
-                const { studentDiscountApplied, studentDiscountPercentage } = get();
-                if (!studentDiscountApplied || studentDiscountPercentage <= 0) return 0;
-                const subtotal = get().getSubtotal();
-                return Number(((subtotal * studentDiscountPercentage) / 100).toFixed(2));
-            },
-
-            getDeliveryFee: () => {
-                const { restaurant, items } = get();
-                if (items.length === 0 || !restaurant) return 0;
-                return Number(restaurant.delivery_fee) || 0;
-            },
-
-            getTotal: () => {
-                const subtotal = get().getSubtotal();
-                const discount = get().getStudentDiscountAmount();
-                const delivery = get().getDeliveryFee();
-                return Math.max(0, subtotal - discount + delivery);
-            },
-
-            getItemCount: () => {
-                return get().items.reduce((count, item) => count + item.quantity, 0);
-            },
-        }),
-        {
-            name: 'fatrna-cart-storage',
-        }
-    )
-);
+    persist: {
+        key: 'fatrna-cart-storage',
+        pick: ['restaurant', 'items', 'studentDiscountApplied', 'studentDiscountPercentage'],
+    },
+});

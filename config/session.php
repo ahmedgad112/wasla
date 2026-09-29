@@ -34,6 +34,12 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
+    /*
+    | When "remember me" / keep me logged in is checked, extend the session
+    | cookie so the customer stays authenticated after closing the browser.
+    */
+    'remember_lifetime' => (int) env('SESSION_REMEMBER_LIFETIME', 60 * 24 * 30),
+
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*

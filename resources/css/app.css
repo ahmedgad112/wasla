@@ -2,8 +2,11 @@
 @source "../views";
 @source "../js";
 
+/* Dark mode only when `.dark` is on <html> — not OS preference */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* =====================================================
-   فطرنا شكراً — Brand Design System
+   وصلة — Brand Design System
    Primary: Orange/Amber | Dark: Stone | Accent: Emerald
    ===================================================== */
 
@@ -501,3 +504,25 @@ body {
 
 
 @import "./dashboard-shells.css";
+
+.app-scroll {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.app-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.chip-scroll {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chip-scroll::-webkit-scrollbar {
+    display: none;
+}

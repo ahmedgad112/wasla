@@ -57,8 +57,8 @@ class LandingCmsService
 
             // CMS Branding and Slogan Settings
             $settings = [
-                'platform_name_ar' => SystemSetting::get('platform_name_ar', 'فطرنا شكراً'),
-                'platform_name_en' => SystemSetting::get('platform_name_en', 'Fatrna Shokran'),
+                'platform_name_ar' => SystemSetting::get('platform_name_ar', 'وصلة'),
+                'platform_name_en' => SystemSetting::get('platform_name_en', 'Wasla'),
                 'hero_title' => SystemSetting::get('hero_title', 'أسرع وألذ فطار وغدا وعشا في برج العرب'),
                 'hero_subtitle' => SystemSetting::get('hero_subtitle', 'اطلب من مطاعم برج العرب المفضلة مع عروض حصرية وتوصيل سريع حتى باب بيتك أو جامعتك'),
                 'city_badge' => SystemSetting::get('city_badge', 'برج العرب والإسكندرية'),
@@ -87,16 +87,16 @@ class LandingCmsService
     {
         return Cache::remember('public.cms_settings', 600, function () {
             return [
-                'platform_name_ar'      => SystemSetting::get('platform_name_ar', 'فطرنا شكراً'),
-                'platform_name_en'      => SystemSetting::get('platform_name_en', 'Fatrna Shokran'),
-                'hero_title'            => SystemSetting::get('hero_title', 'أسرع وألذ فطار وغدا وعشا في برج العرب'),
-                'hero_subtitle'         => SystemSetting::get('hero_subtitle', 'اطلب من مطاعم برج العرب المفضلة مع عروض حصرية وتوصيل سريع حتى باب بيتك أو جامعتك'),
-                'city_badge'            => SystemSetting::get('city_badge', 'برج العرب والإسكندرية'),
-                'student_banner_title'  => SystemSetting::get('student_banner_title', 'خصومات خاصة لطلاب جامعة برج العرب التكنولوجية'),
-                'contact_phone'         => SystemSetting::get('contact_phone', '01000000000'),
-                'contact_whatsapp'      => SystemSetting::get('contact_whatsapp', '201000000000'),
-                'contact_email'         => SystemSetting::get('contact_email', 'support@fatrna-shokran.com'),
-                'footer_description'    => SystemSetting::get('footer_description', 'منصة فطرنا شكراً — توصيل الطعام الأسرع في برج العرب والإسكندرية'),
+                'platform_name_ar' => SystemSetting::get('platform_name_ar', 'وصلة'),
+                'platform_name_en' => SystemSetting::get('platform_name_en', 'Wasla'),
+                'hero_title' => SystemSetting::get('hero_title', 'أسرع وألذ فطار وغدا وعشا في برج العرب'),
+                'hero_subtitle' => SystemSetting::get('hero_subtitle', 'اطلب من مطاعم برج العرب المفضلة مع عروض حصرية وتوصيل سريع حتى باب بيتك أو جامعتك'),
+                'city_badge' => SystemSetting::get('city_badge', 'برج العرب والإسكندرية'),
+                'student_banner_title' => SystemSetting::get('student_banner_title', 'خصومات خاصة لطلاب جامعة برج العرب التكنولوجية'),
+                'contact_phone' => SystemSetting::get('contact_phone', '01000000000'),
+                'contact_whatsapp' => SystemSetting::get('contact_whatsapp', '201000000000'),
+                'contact_email' => SystemSetting::get('contact_email', 'support@fatrna-shokran.com'),
+                'footer_description' => SystemSetting::get('footer_description', 'منصة وصلة — توصيل الطعام الأسرع في برج العرب والإسكندرية'),
             ];
         });
     }
@@ -106,7 +106,6 @@ class LandingCmsService
      */
     public function clearCache(): void
     {
-        Cache::forget('landing_page_payload');
-        Cache::forget('public.cms_settings');
+        PublicCatalogCache::forgetListing();
     }
 }

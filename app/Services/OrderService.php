@@ -10,7 +10,6 @@ use App\Models\MenuItem;
 use App\Models\MenuItemAddon;
 use App\Models\MenuItemOptionValue;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Restaurant;
 use Illuminate\Support\Facades\DB;
@@ -27,9 +26,17 @@ class OrderService
             $restaurantId = (int) $orderData['restaurant_id'];
             $restaurant = Restaurant::findOrFail($restaurantId);
 
-            if ($restaurant->status !== 'ACTIVE') {
+            if ($restaurant->status !== 'ACTIVE' || ! $restaurant->isAcceptingOrders()) {
                 throw ValidationException::withMessages([
-                    'restaurant_id' => __('المطعم غير متاح لاستقبال الطلبات حالياً.'),
+                    'restaurant_id' => __('المطعم مغلق حالياً ولا يستقبل طلبات.'),
+                ]);
+            }
+
+            $isPickupOnly = $restaurant->isPickupOnly();
+
+            if (! $isPickupOnly && ! $restaurant->isDeliveryAvailable()) {
+                throw ValidationException::withMessages([
+                    'restaurant_id' => __('التوصيل غير متاح حالياً من هذا المطعم.'),
                 ]);
             }
 
@@ -53,7 +60,7 @@ class OrderService
                 $addonsPrice = 0.00;
 
                 $selectedOptions = [];
-                if (!empty($itemInput['options'])) {
+                if (! empty($itemInput['options'])) {
                     foreach ($itemInput['options'] as $opt) {
                         if (is_array($opt) && (isset($opt['price']) || isset($opt['optionName']) || isset($opt['valueName']))) {
                             $optPrice = (float) ($opt['price'] ?? 0);
@@ -78,7 +85,7 @@ class OrderService
                 }
 
                 $selectedAddons = [];
-                if (!empty($itemInput['addons'])) {
+                if (! empty($itemInput['addons'])) {
                     foreach ($itemInput['addons'] as $add) {
                         if (is_array($add) && isset($add['id'])) {
                             $addon = MenuItemAddon::where('is_available', true)->find($add['id']);
@@ -132,45 +139,53 @@ class OrderService
                 $studentDiscount = round(($subtotal * (float) $restaurant->student_discount_percentage) / 100, 2);
             }
 
-            // Delivery fee calculation (Fixed or per-KM based on distance)
-            $deliveryFee = (float) $restaurant->delivery_fee;
-            $feePerKm = (float) ($restaurant->delivery_fee_per_km ?? 0);
-            $baseFee = (float) ($restaurant->delivery_base_fee ?? $restaurant->delivery_fee ?? 10.00);
+            $deliveryFee = 0.00;
+            $custLat = ! empty($orderData['latitude']) ? (float) $orderData['latitude'] : null;
+            $custLng = ! empty($orderData['longitude']) ? (float) $orderData['longitude'] : null;
 
-            $custLat = !empty($orderData['latitude']) ? (float) $orderData['latitude'] : null;
-            $custLng = !empty($orderData['longitude']) ? (float) $orderData['longitude'] : null;
+            if ($isPickupOnly) {
+                $orderData['address'] = $orderData['address']
+                    ?: ('استلام من المطعم — '.($restaurant->address ?: $restaurant->name));
+                $orderData['latitude'] = $restaurant->latitude;
+                $orderData['longitude'] = $restaurant->longitude;
+            } else {
+                // Delivery fee calculation (Fixed or per-KM based on distance)
+                $deliveryFee = (float) $restaurant->delivery_fee;
+                $feePerKm = (float) ($restaurant->delivery_fee_per_km ?? 0);
+                $baseFee = (float) ($restaurant->delivery_base_fee ?? $restaurant->delivery_fee ?? 10.00);
 
-            // If coordinates are missing, resolve from address text
-            if ((empty($custLat) || empty($custLng)) && !empty($orderData['address'])) {
-                $addr = $orderData['address'];
-                if (preg_match('/(الإسكندرية|اسكندرية|Alexandria|سموحة|سيدي بشر|ميامي|محرم بك|المنشية|محطة الرمل|سيدي جابر|العصافرة|المندرة|كامب شيزار|كليوباترا|لوران|جناكليس|سان ستيفانو)/u', $addr)) {
-                    $custLat = 31.2001;
-                    $custLng = 29.9187;
-                } elseif (preg_match('/(العجمي|البيطاش|الهانوفيل|الدخيلة|الكيلو 21)/u', $addr)) {
-                    $custLat = 31.1000;
-                    $custLng = 29.7700;
-                } elseif (preg_match('/(BATU|تكنولوجية|جامعة برج العرب التكنولوجية)/u', $addr)) {
-                    $custLat = 30.8756;
-                    $custLng = 29.5842;
-                } elseif (preg_match('/(EJUST|اليابانية|الجامعة المصرية اليابانية)/u', $addr)) {
-                    $custLat = 30.8648;
-                    $custLng = 29.5741;
-                } elseif (preg_match('/(سنجور|جامعة سنجور)/u', $addr)) {
-                    $custLat = 30.8805;
-                    $custLng = 29.5912;
+                // If coordinates are missing, resolve from address text
+                if ((empty($custLat) || empty($custLng)) && ! empty($orderData['address'])) {
+                    $addr = $orderData['address'];
+                    if (preg_match('/(الإسكندرية|اسكندرية|Alexandria|سموحة|سيدي بشر|ميامي|محرم بك|المنشية|محطة الرمل|سيدي جابر|العصافرة|المندرة|كامب شيزار|كليوباترا|لوران|جناكليس|سان ستيفانو)/u', $addr)) {
+                        $custLat = 31.2001;
+                        $custLng = 29.9187;
+                    } elseif (preg_match('/(العجمي|البيطاش|الهانوفيل|الدخيلة|الكيلو 21)/u', $addr)) {
+                        $custLat = 31.1000;
+                        $custLng = 29.7700;
+                    } elseif (preg_match('/(BATU|تكنولوجية|جامعة برج العرب التكنولوجية)/u', $addr)) {
+                        $custLat = 30.8756;
+                        $custLng = 29.5842;
+                    } elseif (preg_match('/(EJUST|اليابانية|الجامعة المصرية اليابانية)/u', $addr)) {
+                        $custLat = 30.8648;
+                        $custLng = 29.5741;
+                    } elseif (preg_match('/(سنجور|جامعة سنجور)/u', $addr)) {
+                        $custLat = 30.8805;
+                        $custLng = 29.5912;
+                    }
+                    $orderData['latitude'] = $custLat;
+                    $orderData['longitude'] = $custLng;
                 }
-                $orderData['latitude'] = $custLat;
-                $orderData['longitude'] = $custLng;
-            }
 
-            if ($feePerKm > 0 && !empty($custLat) && !empty($custLng)) {
-                $restLat = (float) ($restaurant->latitude ?: 30.8700);
-                $restLng = (float) ($restaurant->longitude ?: 29.5800);
+                if ($feePerKm > 0 && ! empty($custLat) && ! empty($custLng)) {
+                    $restLat = (float) ($restaurant->latitude ?: 30.8700);
+                    $restLng = (float) ($restaurant->longitude ?: 29.5800);
 
-                $distance = $this->calculateDistanceKm($restLat, $restLng, $custLat, $custLng);
-                $deliveryFee = round($baseFee + ($distance * $feePerKm), 2);
-            } elseif (isset($orderData['delivery_fee']) && (float) $orderData['delivery_fee'] > 0) {
-                $deliveryFee = (float) $orderData['delivery_fee'];
+                    $distance = $this->calculateDistanceKm($restLat, $restLng, $custLat, $custLng);
+                    $deliveryFee = round($baseFee + ($distance * $feePerKm), 2);
+                } elseif (isset($orderData['delivery_fee']) && (float) $orderData['delivery_fee'] > 0) {
+                    $deliveryFee = (float) $orderData['delivery_fee'];
+                }
             }
 
             $serviceFee = 0.00;
@@ -185,7 +200,7 @@ class OrderService
             }
 
             // Generate unique human-readable order number
-            $orderNumber = 'FS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+            $orderNumber = 'FS-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4));
 
             $order = Order::create([
                 'order_number' => $orderNumber,
@@ -257,7 +272,7 @@ class OrderService
         ];
 
         $oldStatus = $order->status;
-        if (!isset($allowedTransitions[$oldStatus]) || !in_array($newStatus, $allowedTransitions[$oldStatus])) {
+        if (! isset($allowedTransitions[$oldStatus]) || ! in_array($newStatus, $allowedTransitions[$oldStatus])) {
             throw ValidationException::withMessages([
                 'status' => "لا يمكن تغيير حالة الطلب من {$oldStatus} إلى {$newStatus}.",
             ]);
@@ -332,6 +347,7 @@ class OrderService
              cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
              sin($dLon / 2) * sin($dLon / 2);
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
         return max(0.5, round($earthRadius * $c, 1));
     }
 }
