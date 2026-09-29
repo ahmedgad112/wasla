@@ -34,6 +34,7 @@ const handleAssignDriver = (): void => {
     router.post(`/restaurant/orders/${props.order.id}/assign-driver`, {
         driver_id: Number(selectedDriverId.value),
     });
+    
 };
 
 const statusMap: Record<string, { label: string; bg: string }> = {

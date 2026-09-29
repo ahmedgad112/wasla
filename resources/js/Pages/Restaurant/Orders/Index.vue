@@ -46,6 +46,7 @@ const props = withDefaults(
     {
         available_drivers: () => [],
     },
+    
 );
 
 const items = computed(() => props.orders?.data || []);
