@@ -87,6 +87,7 @@ const normalizeRole = (roleItem: string | { name?: string }): string => {
                             type="email"
                             class="w-full bg-white border border-stone-200 rounded-lg px-4 py-2.5 text-stone-900 focus:outline-none focus:border-orange-500 transition-colors"
                         />
+                        <p v-if="form.errors.email" class="text-red-400 text-xs mt-1">{{ form.errors.email }}</p>
                     </div>
                     <div>
                         <label class="block text-sm text-stone-400 mb-1">رقم الهاتف</label>
@@ -95,6 +96,7 @@ const normalizeRole = (roleItem: string | { name?: string }): string => {
                             type="text"
                             class="w-full bg-white border border-stone-200 rounded-lg px-4 py-2.5 text-stone-900 focus:outline-none focus:border-orange-500 transition-colors"
                         />
+                        <p v-if="form.errors.phone" class="text-red-400 text-xs mt-1">{{ form.errors.phone }}</p>
                     </div>
                     <div class="col-span-2">
                         <label class="block text-sm text-stone-400 mb-1">كلمة المرور الجديدة (اتركها فارغة إن لم تريد تغييرها)</label>
@@ -104,6 +106,7 @@ const normalizeRole = (roleItem: string | { name?: string }): string => {
                             placeholder="••••••••"
                             class="w-full bg-white border border-stone-200 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:border-orange-500 transition-colors"
                         />
+                        <p v-if="form.errors.password" class="text-red-400 text-xs mt-1">{{ form.errors.password }}</p>
                     </div>
                     <div class="col-span-2 flex items-center gap-3">
                         <input
@@ -143,6 +146,7 @@ const normalizeRole = (roleItem: string | { name?: string }): string => {
                         <span class="text-sm text-stone-900">{{ roleLabels[normalizeRole(roleItem)] ?? normalizeRole(roleItem) }}</span>
                     </label>
                 </div>
+                <p v-if="form.errors.role" class="text-red-400 text-xs mt-3">{{ form.errors.role }}</p>
             </div>
 
             <div class="flex items-center justify-end gap-4">

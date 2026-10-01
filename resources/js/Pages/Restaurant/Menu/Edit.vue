@@ -24,7 +24,7 @@ const props = defineProps<{
 const form = useForm({
     name: props.menuItem.name,
     description: props.menuItem.description ?? '',
-    price: (props.menuItem.price / 100).toFixed(2),
+    price: String(props.menuItem.price),
     category_id: String(props.menuItem.category_id),
     is_available: props.menuItem.is_available,
     is_featured: props.menuItem.is_featured,

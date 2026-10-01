@@ -139,6 +139,7 @@ const normalizeRole = (roleItem: string | { name?: string }): string => {
                         <span class="text-sm text-stone-900">{{ roleLabels[normalizeRole(roleItem)] ?? normalizeRole(roleItem) }}</span>
                     </label>
                 </div>
+                <p v-if="form.errors.role" class="text-red-400 text-xs mt-3">{{ form.errors.role }}</p>
             </div>
 
             <div class="flex items-center justify-end gap-4">

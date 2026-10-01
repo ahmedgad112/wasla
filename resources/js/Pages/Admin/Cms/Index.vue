@@ -41,6 +41,10 @@ const submit = (): void => {
             </span>
         </div>
 
+        <p v-if="Object.keys(form.errors).length" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            لم يتم حفظ المحتوى. راجع الحقول وحاول مرة أخرى.
+        </p>
+
         <form class="space-y-6" @submit.prevent="submit">
             <div class="bg-white border border-stone-200 rounded-2xl p-6 space-y-4 shadow-xs">
                 <h2 class="text-lg font-semibold text-stone-900 flex items-center gap-2">
