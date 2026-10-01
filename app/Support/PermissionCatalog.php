@@ -243,7 +243,7 @@ class PermissionCatalog
         foreach (self::defaultGrants() as $roleName => $permissions) {
             $role = Role::findByName($roleName, 'web');
 
-            if ($overwriteExistingGrants || $role->permissions()->doesntExist()) {
+            if ($roleName === 'SUPER_ADMIN' || $overwriteExistingGrants || $role->permissions()->doesntExist()) {
                 $role->syncPermissions($permissions);
             }
         }

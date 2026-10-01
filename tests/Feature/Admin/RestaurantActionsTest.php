@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Category;
+use App\Models\MenuItem;
+use App\Models\Offer;
 use App\Models\Restaurant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -101,6 +104,51 @@ class RestaurantActionsTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertSoftDeleted($restaurant);
+    }
+
+    public function test_deleting_a_restaurant_removes_its_offers_and_menu_from_customers(): void
+    {
+        $admin = $this->adminUser();
+        $restaurant = $this->restaurant();
+        $category = Category::query()->create([
+            'restaurant_id' => $restaurant->id,
+            'name' => 'فطار',
+            'slug' => 'breakfast-delete',
+        ]);
+        $item = MenuItem::query()->create([
+            'restaurant_id' => $restaurant->id,
+            'category_id' => $category->id,
+            'name' => 'سندوتش محذوف',
+            'price' => 40,
+            'is_available' => true,
+        ]);
+        Offer::query()->create([
+            'restaurant_id' => $restaurant->id,
+            'menu_item_id' => $item->id,
+            'title' => 'عرض المطعم المحذوف',
+            'original_price' => 40,
+            'discount_price' => 25,
+            'start_date' => now()->subDay(),
+            'end_date' => now()->addWeek(),
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete("/admin/restaurants/{$restaurant->id}")
+            ->assertRedirect(route('admin.restaurants.index'));
+
+        $this->assertDatabaseMissing('offers', ['title' => 'عرض المطعم المحذوف']);
+        $this->assertDatabaseMissing('menu_items', ['id' => $item->id]);
+        $this->assertDatabaseMissing('categories', ['id' => $category->id]);
+
+        $this->get('/offers')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Public/Offers')
+                ->where('offers.data', []));
+
+        $this->get("/restaurants/{$restaurant->slug}")
+            ->assertRedirect(route('restaurants'));
     }
 
     public function test_deleting_a_missing_restaurant_returns_to_the_list(): void

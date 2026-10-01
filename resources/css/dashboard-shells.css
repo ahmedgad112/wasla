@@ -56,7 +56,7 @@
     object-fit: cover;
 }
 
-.admin-nav { flex: 1; overflow: auto; padding: .4rem 1rem 1rem; }
+.admin-nav { flex: 1; min-height: 0; overflow: auto; padding: .4rem 1rem 1rem; }
 .admin-nav-group { margin-bottom: 1.1rem; }
 .admin-nav-group > p {
     margin: 0 0 .45rem .35rem;

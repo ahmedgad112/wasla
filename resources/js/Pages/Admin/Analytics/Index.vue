@@ -45,7 +45,7 @@ const props = defineProps<{
     };
 }>();
 
-const fmt = (v: number): string => (v / 100).toFixed(2);
+const fmt = (v: number): string => Number(v || 0).toFixed(2);
 
 const tooltipStyle = {
     backgroundColor: '#1c1917',

@@ -25,13 +25,7 @@ class PublicController extends Controller
     {
         $activeOffers = Cache::remember(PublicCatalogCache::ACTIVE_OFFERS, 60, function () {
             return Offer::with(['restaurant:id,name,slug,logo'])
-                ->where('is_active', true)
-                ->where(function ($q) {
-                    $q->whereNull('start_date')->orWhere('start_date', '<=', now());
-                })
-                ->where(function ($q) {
-                    $q->whereNull('end_date')->orWhere('end_date', '>=', now());
-                })
+                ->forCustomers()
                 ->latest()
                 ->take(12)
                 ->get()
@@ -57,7 +51,7 @@ class PublicController extends Controller
         });
 
         $stats = Cache::remember(PublicCatalogCache::STATS, 120, function () {
-            $totalDishes = MenuItem::where('is_available', true)->count();
+            $totalDishes = MenuItem::query()->where('is_available', true)->whereHas('restaurant')->count();
 
             return [
                 'restaurants' => Restaurant::where('status', 'ACTIVE')->count(),
@@ -121,7 +115,7 @@ class PublicController extends Controller
     public function leaderboard(): Response
     {
         $stats = Cache::remember(PublicCatalogCache::STATS, 120, function () {
-            $totalDishes = MenuItem::where('is_available', true)->count();
+            $totalDishes = MenuItem::query()->where('is_available', true)->whereHas('restaurant')->count();
 
             return [
                 'restaurants' => Restaurant::where('status', 'ACTIVE')->count(),
@@ -278,13 +272,7 @@ class PublicController extends Controller
     public function offers(): Response
     {
         $offers = Offer::with(['restaurant:id,name,slug,logo'])
-            ->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('start_date')->orWhere('start_date', '<=', now());
-            })
-            ->where(function ($q) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', now());
-            })
+            ->forCustomers()
             ->latest()
             ->paginate(16);
 

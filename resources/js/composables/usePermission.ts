@@ -10,6 +10,10 @@ export function userCan(
         return false;
     }
 
+    if (role === 'SUPER_ADMIN') {
+        return true;
+    }
+
     return (permissions ?? []).includes(permission);
 }
 

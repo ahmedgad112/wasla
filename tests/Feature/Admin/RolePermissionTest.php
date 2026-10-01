@@ -43,9 +43,10 @@ class RolePermissionTest extends TestCase
         );
     }
 
-    public function test_super_admin_role_can_be_edited_like_the_others(): void
+    public function test_super_admin_keeps_every_permission_and_every_admin_page(): void
     {
         $admin = $this->userWithRole('SUPER_ADMIN');
+        Role::findByName('SUPER_ADMIN', 'web')->syncPermissions(['dashboard.view']);
 
         $this->actingAs($admin)
             ->put(route('admin.roles.update', 'SUPER_ADMIN'), [
@@ -55,9 +56,19 @@ class RolePermissionTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertEqualsCanonicalizing(
-            ['dashboard.view', 'roles.manage'],
+            PermissionCatalog::names(),
             Role::findByName('SUPER_ADMIN', 'web')->permissions->pluck('name')->all(),
         );
+
+        $this->actingAs($admin)
+            ->get(route('admin.customers.index'))
+            ->assertOk();
+        $this->actingAs($admin)
+            ->get(route('admin.billing.index'))
+            ->assertOk();
+        $this->actingAs($admin)
+            ->get(route('admin.roles.index'))
+            ->assertOk();
     }
 
     public function test_admin_cannot_open_the_roles_page(): void

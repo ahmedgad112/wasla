@@ -48,7 +48,10 @@ class RoleController extends Controller
 
         $roleModel = Role::findByName($role, 'web');
         $previous = $roleModel->permissions->pluck('name')->values()->all();
-        $roleModel->syncPermissions($validated['permissions']);
+        $permissions = $role === 'SUPER_ADMIN'
+            ? PermissionCatalog::names()
+            : $validated['permissions'];
+        $roleModel->syncPermissions($permissions);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -65,7 +68,7 @@ class RoleController extends Controller
             'permissions' => $previous,
         ], [
             'role' => $role,
-            'permissions' => $validated['permissions'],
+            'permissions' => $permissions,
         ]);
 
         return back()->with('success', 'تم تحديث صلاحيات '.PermissionCatalog::roleLabel($role).'.');

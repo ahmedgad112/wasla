@@ -110,7 +110,7 @@ const closeSidebar = (): void => {
 
 <template>
     <div class="admin-shell min-h-screen text-stone-900 dark:text-stone-100">
-        <aside class="admin-rail fixed inset-y-0 start-0 z-40 hidden w-[17.5rem] flex-col lg:flex">
+        <aside class="admin-rail fixed inset-y-0 start-0 z-40 hidden w-[17.5rem] flex-col overflow-hidden lg:flex">
             <Link href="/admin/dashboard" prefetch class="admin-brand">
                 <span class="admin-mark">
                     <img src="/images/logo.png" alt="Wasla" />
@@ -121,7 +121,7 @@ const closeSidebar = (): void => {
                 </span>
             </Link>
 
-            <nav class="admin-nav custom-scrollbar">
+            <nav class="admin-nav custom-scrollbar min-h-0">
                 <div v-for="group in visibleNavGroups" :key="group.label" class="admin-nav-group">
                     <p>{{ group.label }}</p>
                     <Link
@@ -156,7 +156,7 @@ const closeSidebar = (): void => {
                 aria-label="إغلاق القائمة"
                 @click="closeSidebar"
             />
-            <div class="admin-rail relative z-10 flex h-full w-[17.5rem] flex-col shadow-2xl">
+            <div class="admin-rail relative z-10 flex h-full w-[17.5rem] flex-col overflow-hidden shadow-2xl">
                 <div class="flex items-center justify-between border-b border-stone-100 px-4 py-4 dark:border-stone-800">
                     <Link href="/admin/dashboard" class="admin-brand !border-0 !p-0" @click="closeSidebar">
                         <span class="admin-mark">
@@ -171,7 +171,7 @@ const closeSidebar = (): void => {
                         <X class="h-5 w-5" />
                     </button>
                 </div>
-                <nav class="admin-nav custom-scrollbar">
+                <nav class="admin-nav custom-scrollbar min-h-0">
                     <div v-for="group in visibleNavGroups" :key="group.label" class="admin-nav-group">
                         <p>{{ group.label }}</p>
                         <Link

@@ -263,6 +263,20 @@ class RestaurantController extends Controller
         DB::transaction(function () use ($restaurant, $staffUserIds): void {
             ActivityLog::log('RESTAURANT_DELETED', 'Restaurant', $restaurant->id, ['name' => $restaurant->name]);
 
+            $driverUserIds = $restaurant->deliveryDrivers()->pluck('user_id');
+            $restaurant->offers()->delete();
+            $restaurant->categories()->delete();
+            $restaurant->menuItems()->delete();
+            $restaurant->deliveryDrivers()->update([
+                'is_active' => false,
+                'availability_status' => 'OFFLINE',
+            ]);
+
+            User::query()
+                ->whereIn('id', $driverUserIds)
+                ->where('role', 'DELIVERY_DRIVER')
+                ->update(['is_active' => false]);
+
             $restaurant->update([
                 'status' => 'INACTIVE',
                 'availability_status' => 'CLOSED',
