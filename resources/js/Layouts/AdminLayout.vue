@@ -26,6 +26,7 @@ import {
 import type { SharedInertiaProps } from '../Types';
 import { useThemeMode } from '../composables/useThemeMode';
 import { usePermission } from '../composables/usePermission';
+import { warmNavigation } from '../lib/warmNavigation';
 
 const props = defineProps<{
     title?: string;
@@ -106,6 +107,8 @@ const activeLabel = computed(() => {
 const closeSidebar = (): void => {
     sidebarOpen.value = false;
 };
+
+warmNavigation(() => visibleNavGroups.value.flatMap((group) => group.items.map((item) => item.href)));
 </script>
 
 <template>

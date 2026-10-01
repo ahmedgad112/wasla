@@ -4,6 +4,7 @@ use App\Http\Middleware\CheckBillingStatus;
 use App\Http\Middleware\EnsurePortalRole;
 use App\Http\Middleware\EnsureRoutePermission;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Services\AuthService;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,6 +28,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'billing.check' => CheckBillingStatus::class,
             'route.permission' => EnsureRoutePermission::class,
         ]);
+
+        $middleware->redirectUsersTo(function (Request $request) {
+            $user = $request->user();
+
+            if ($user === null) {
+                return route('home');
+            }
+
+            return route(app(AuthService::class)->dashboardRouteName($user));
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

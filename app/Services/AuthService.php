@@ -30,6 +30,60 @@ class AuthService
     ];
 
     /**
+     * Sign in from the shared login page and keep the account on its own portal.
+     */
+    public function login(string $login, string $password, bool $remember = false): User
+    {
+        $user = User::query()
+            ->where('email', $login)
+            ->orWhere('phone', $login)
+            ->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
+            ActivityLog::log('FAILED_LOGIN_ATTEMPT', null, null, null, ['login' => $login]);
+
+            throw ValidationException::withMessages([
+                'email' => __('بيانات الاعتماد غير متطابقة مع سجلاتنا.'),
+            ]);
+        }
+
+        $portal = $this->portalForRole($user->role);
+
+        if ($portal === null) {
+            throw ValidationException::withMessages([
+                'email' => __('غير مصرح لك بتسجيل الدخول.'),
+            ]);
+        }
+
+        return $this->authenticate($portal, $login, $password, $remember);
+    }
+
+    /**
+     * Named route of the dashboard that belongs to this account.
+     */
+    public function dashboardRouteName(User $user): string
+    {
+        return match ($this->portalForRole($user->role)) {
+            self::PORTAL_ADMIN => 'admin.dashboard',
+            self::PORTAL_RESTAURANT => 'restaurant.dashboard',
+            self::PORTAL_DELIVERY => 'delivery.dashboard',
+            self::PORTAL_CUSTOMER => 'customer.dashboard',
+            default => 'home',
+        };
+    }
+
+    public function portalForRole(?string $role): ?string
+    {
+        foreach ($this->portalRoles as $portal => $roles) {
+            if (in_array($role, $roles, true)) {
+                return $portal;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Authenticate user for a specific portal with rigid security checks.
      */
     public function authenticate(string $portal, string $login, string $password, bool $remember = false): User

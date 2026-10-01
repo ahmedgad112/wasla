@@ -48,7 +48,6 @@ const currentCoverUrl = computed(() =>
 );
 const currentLogoUrl = computed(() =>
     logoPreview.value || resolveMediaUrl(props.restaurant.logo || props.restaurant.cover_image),
-    
 );
 
 const form = useForm<{

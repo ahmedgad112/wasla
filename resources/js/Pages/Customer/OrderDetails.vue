@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, type Component } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import CustomerLayout from '../../Layouts/CustomerLayout.vue';
 import CustomerLiveTrackingMap from '../../Components/CustomerLiveTrackingMap.vue';
 import type { Order, OrderStatus } from '../../Types';
 import {
@@ -175,7 +174,7 @@ const waLink = computed(() => `https://wa.me/2${(driver.value?.phone || '').repl
 </script>
 
 <template>
-    <CustomerLayout :title="`تفاصيل الطلب ${order.order_number}`">
+    <div class="px-4 py-4">
         <Head :title="`تفاصيل الطلب ${order.order_number}`" />
 
         <div class="space-y-8 max-w-6xl mx-auto">
@@ -672,5 +671,5 @@ const waLink = computed(() => `https://wa.me/2${(driver.value?.phone || '').repl
                 </div>
             </div>
         </div>
-    </CustomerLayout>
+    </div>
 </template>

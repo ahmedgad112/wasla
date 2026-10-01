@@ -4,6 +4,9 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { Bike, User, LogOut, Moon, Sun, Navigation, History } from '@lucide/vue';
 import type { SharedInertiaProps } from '../Types';
 import { usePermission } from '../composables/usePermission';
+import { warmNavigation } from '../lib/warmNavigation';
+
+defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(
     defineProps<{
@@ -15,20 +18,25 @@ const props = withDefaults(
     },
 );
 
-const page = usePage<SharedInertiaProps>();
+const page = usePage<SharedInertiaProps & { driver?: { availability_status?: string } }>();
 const { can } = usePermission();
 const auth = computed(() => page.props.auth);
 const flash = computed(() => page.props.flash);
 const darkMode = ref(false);
-const available = ref(props.isAvailable);
-const currentPath = ref(typeof window !== 'undefined' ? window.location.pathname : '');
+const rememberedAvailable = ref(props.isAvailable);
+const currentPath = computed(() => page.url.split('?')[0]);
 
 watch(
-    () => props.isAvailable,
-    (value) => {
-        available.value = value;
+    () => page.props.driver?.availability_status,
+    (status) => {
+        if (status) {
+            rememberedAvailable.value = status === 'AVAILABLE';
+        }
     },
+    { immediate: true },
 );
+
+const available = computed(() => rememberedAvailable.value);
 
 onMounted(() => {
     const isDark = localStorage.getItem('fatrna_theme') === 'dark';
@@ -37,7 +45,6 @@ onMounted(() => {
     if (!('fatrna_theme' in localStorage)) {
         localStorage.setItem('fatrna_theme', 'light');
     }
-    currentPath.value = window.location.pathname;
 });
 
 const toggleDarkMode = (): void => {
@@ -53,6 +60,20 @@ const toggleDarkMode = (): void => {
 };
 
 const isActive = (path: string): boolean => currentPath.value === path;
+
+warmNavigation(() => {
+    const hrefs: string[] = [];
+
+    if (can('delivery.orders')) {
+        hrefs.push('/delivery/dashboard', '/delivery/active-order', '/delivery/order-history');
+    }
+
+    if (can('delivery.profile')) {
+        hrefs.push('/delivery/profile');
+    }
+
+    return hrefs;
+});
 </script>
 
 <template>

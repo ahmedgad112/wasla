@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import RestaurantCard from '../../Components/RestaurantCard.vue';
 import type { Restaurant, PaginatedResponse } from '../../Types';
 import { Search, Store } from '@lucide/vue';
@@ -27,7 +26,6 @@ const filtered = computed(() =>
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="المطاعم" />
 
         <div class="px-4 pt-4 pb-2 sm:px-6 lg:px-8">
@@ -57,5 +55,4 @@ const filtered = computed(() =>
                 />
             </template>
         </div>
-    </GuestLayout>
 </template>

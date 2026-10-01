@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import CustomerLayout from '../../Layouts/CustomerLayout.vue';
 import type { Order, PaginatedResponse } from '../../Types';
 import { ShoppingBag, ArrowRight } from '@lucide/vue';
 
@@ -30,7 +29,7 @@ const formatOrderDate = (date: string): string =>
 </script>
 
 <template>
-    <CustomerLayout title="سجل طلباتي">
+    <div class="px-4 py-4">
         <Head title="سجل طلباتي" />
 
         <div class="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 p-6 shadow-xs">
@@ -111,5 +110,5 @@ const formatOrderDate = (date: string): string =>
                 </div>
             </div>
         </div>
-    </CustomerLayout>
+    </div>
 </template>

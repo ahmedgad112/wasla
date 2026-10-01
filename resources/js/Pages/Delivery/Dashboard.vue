@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import DeliveryLayout from '../../Layouts/DeliveryLayout.vue';
 import type { DeliveryDriver, Order } from '../../Types';
 import {
     Bike,
@@ -93,7 +92,6 @@ const handleUpdateStatus = (orderId: number, nextStatus: 'OUT_FOR_DELIVERY' | 'D
 </script>
 
 <template>
-    <DeliveryLayout title="لوحة كابتن التوصيل" :is-available="isAvailable">
         <Head title="لوحة كابتن التوصيل" />
 
         <div class="space-y-6">
@@ -334,5 +332,4 @@ const handleUpdateStatus = (orderId: number, nextStatus: 'OUT_FOR_DELIVERY' | 'D
                 </div>
             </div>
         </div>
-    </DeliveryLayout>
 </template>

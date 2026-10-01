@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import DeliveryLayout from '../../Layouts/DeliveryLayout.vue';
 import type { Order, PaginatedResponse } from '../../Types';
 import {
     Bike,
@@ -85,7 +84,6 @@ const statusMeta = (status: string) => {
 </script>
 
 <template>
-    <DeliveryLayout title="سجل التوصيلات والطلبات">
         <Head title="سجل الطلبات" />
 
         <div class="space-y-6 pb-10" dir="rtl">
@@ -380,5 +378,4 @@ const statusMeta = (status: string) => {
                 </div>
             </div>
         </div>
-    </DeliveryLayout>
 </template>

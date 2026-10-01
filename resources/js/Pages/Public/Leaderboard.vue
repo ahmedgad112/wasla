@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import {
     Crown,
     Flame,
@@ -40,7 +39,6 @@ const king = computed(
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="لوحة الشرف والأكثر طلباً — جامعة برج العرب التكنولوجية" />
 
         <div class="px-4 py-4 space-y-6">
@@ -208,5 +206,4 @@ const king = computed(
                 </Link>
             </div>
         </div>
-    </GuestLayout>
 </template>

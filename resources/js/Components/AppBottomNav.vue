@@ -37,7 +37,7 @@ const accountHref = computed(() => {
 
 const ordersHref = computed(() => (!isLoggedIn.value ? '/login' : '/customer/orders'));
 
-const showOrders = computed(() => !isCustomer.value || can('customer.orders'));
+const showOrders = computed(() => (isLoggedIn.value ? isCustomer.value && can('customer.orders') : true));
 const showAccount = computed(() => !isCustomer.value || can('customer.profile'));
 const showCart = computed(() => !isLoggedIn.value || !isCustomer.value || can('customer.orders'));
 

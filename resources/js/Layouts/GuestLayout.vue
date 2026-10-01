@@ -13,6 +13,9 @@ import type { SharedInertiaProps } from '../Types';
 import CartDrawer from '../Components/CartDrawer.vue';
 import AppBottomNav from '../Components/AppBottomNav.vue';
 import { useAvailabilityStore } from '../Stores/availabilityStore';
+import { warmNavigation } from '../lib/warmNavigation';
+
+defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(
     defineProps<{
@@ -29,9 +32,6 @@ const props = withDefaults(
 const AUTH_PATHS = [
     '/login',
     '/register',
-    '/admin/login',
-    '/restaurant/login',
-    '/delivery/login',
 ];
 
 function applyTheme(isDark: boolean): void {
@@ -50,7 +50,9 @@ const availabilityStore = useAvailabilityStore();
 const isAuthScreen = computed(() =>
     AUTH_PATHS.some((path) => url.value === path || url.value.startsWith(`${path}?`)),
 );
+const isRestaurantDetails = computed(() => /^\/restaurants\/[^/]+$/.test(url.value.split('?')[0]));
 const showBottomNav = computed(() => (props.hideBottomNav === true ? false : !isAuthScreen.value));
+const showHeader = computed(() => !isAuthScreen.value && !props.hideHeader && !isRestaurantDetails.value);
 
 onMounted(() => {
     applyTheme(false);
@@ -63,7 +65,7 @@ watch(
         if (authScreen) {
             availabilityStore.stop();
         } else {
-            availabilityStore.start(15000);
+            availabilityStore.start(30000);
         }
     },
     { immediate: true },
@@ -98,16 +100,26 @@ const accountHref = computed(() => {
     }
     return '/customer/profile';
 });
+
+warmNavigation(() => {
+    const hrefs = ['/', '/offers', '/restaurants', '/leaderboard', accountHref.value];
+
+    if (auth.value?.user?.role === 'CUSTOMER') {
+        hrefs.push('/customer/orders', '/customer/profile', '/customer/dashboard');
+    }
+
+    return hrefs;
+});
 </script>
 
 <template>
     <div class="relative flex min-h-dvh w-full flex-col bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
         <header
-            v-if="!isAuthScreen && !hideHeader"
+            v-if="showHeader"
             class="sticky top-0 z-30 border-b border-stone-200 bg-white/95 px-4 pb-3 pt-[max(0.65rem,env(safe-area-inset-top))] backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95 sm:px-6 lg:px-8"
         >
             <div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
-                <Link href="/" class="flex min-w-0 items-center gap-2.5">
+                <Link href="/" prefetch class="flex min-w-0 items-center gap-2.5">
                     <img
                         src="/images/logo.png"
                         alt="Wasla"
@@ -146,6 +158,7 @@ const accountHref = computed(() => {
                     </Link>
                     <Link
                         :href="accountHref"
+                        prefetch
                         class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-orange-500 text-sm font-black text-white"
                         aria-label="الحساب"
                     >
@@ -167,7 +180,7 @@ const accountHref = computed(() => {
             class="mx-auto w-full max-w-7xl flex-1"
             :class="[
                 showBottomNav ? 'pb-24' : 'pb-4',
-                hideHeader ? 'max-w-none' : '',
+                hideHeader || isRestaurantDetails ? 'max-w-none' : '',
                 isAuthScreen ? 'pt-[max(0.85rem,env(safe-area-inset-top))]' : '',
             ]"
         >

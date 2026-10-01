@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import { LogIn, Mail, Lock } from '@lucide/vue';
 
 const form = useForm({
@@ -20,7 +19,6 @@ const submit = (): void => {
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="تسجيل الدخول" />
 
         <div class="flex items-center justify-center px-4 py-8">
@@ -35,7 +33,7 @@ const submit = (): void => {
                         مرحباً بك في Wasla
                     </h1>
                     <p class="text-xs text-stone-500 dark:text-stone-400 mt-2">
-                        سجل دخولك لتتبع طلباتك والحصول على خصومات الطلاب المباشرة
+                        سجل دخولك بالإيميل أو الهاتف، وسيتم فتح لوحة التحكم الخاصة بحسابك
                     </p>
                 </div>
 
@@ -104,12 +102,11 @@ const submit = (): void => {
                 </form>
 
                 <div class="text-center pt-4 border-t border-stone-100 dark:border-stone-800 text-xs text-stone-500 dark:text-stone-400">
-                    <span>ليس لديك حساب بعد؟ </span>
+                    <span>عميل جديد؟ </span>
                     <Link href="/register" class="text-orange-600 font-bold hover:underline">
                         أنشئ حسابك
                     </Link>
                 </div>
             </div>
         </div>
-    </GuestLayout>
 </template>

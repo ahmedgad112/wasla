@@ -54,27 +54,17 @@ Route::controller(PublicController::class)->group(function () {
 
 // =====================================================
 // AUTHENTICATION ROUTES
-// Each portal has its own login page and route
+// One login page. The account role chooses the dashboard.
 // =====================================================
 Route::middleware('guest')->group(function () {
-
-    // Customer Auth
-    Route::get('/login', [AuthController::class, 'showCustomerLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'customerLogin'])->name('customer.login.post');
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
     Route::get('/register', [AuthController::class, 'showCustomerRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'customerRegister'])->name('customer.register.post');
 
-    // Admin Auth — Only SUPER_ADMIN, ADMIN, PLATFORM_STAFF
-    Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
-    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.post');
-
-    // Restaurant Auth — Only RESTAURANT_OWNER, RESTAURANT_STAFF
-    Route::get('/restaurant/login', [AuthController::class, 'showRestaurantLogin'])->name('restaurant.login');
-    Route::post('/restaurant/login', [AuthController::class, 'restaurantLogin'])->name('restaurant.login.post');
-
-    // Delivery Auth — Only DELIVERY_DRIVER
-    Route::get('/delivery/login', [AuthController::class, 'showDeliveryLogin'])->name('delivery.login');
-    Route::post('/delivery/login', [AuthController::class, 'deliveryLogin'])->name('delivery.login.post');
+    Route::redirect('/admin/login', '/login')->name('admin.login');
+    Route::redirect('/restaurant/login', '/login')->name('restaurant.login');
+    Route::redirect('/delivery/login', '/login')->name('delivery.login');
 });
 
 // Logout (any authenticated user)
@@ -141,6 +131,12 @@ Route::middleware(['auth', 'portal:ADMIN', 'route.permission'])->prefix('admin')
 
     // Orders
     Route::get('/orders', [AdminOrder::class, 'index'])->name('orders.index');
+    Route::post('/orders/archive', [AdminOrder::class, 'bulkArchive'])->name('orders.archive.bulk');
+    Route::post('/orders/restore', [AdminOrder::class, 'bulkRestore'])->name('orders.restore.bulk');
+    Route::delete('/orders/bulk', [AdminOrder::class, 'bulkDestroy'])->name('orders.destroy.bulk');
+    Route::post('/orders/{id}/archive', [AdminOrder::class, 'archive'])->name('orders.archive');
+    Route::post('/orders/{id}/restore', [AdminOrder::class, 'restore'])->name('orders.restore');
+    Route::delete('/orders/{id}', [AdminOrder::class, 'destroy'])->name('orders.destroy');
     Route::get('/orders/{id}', [AdminOrder::class, 'show'])->name('orders.show');
 
     // Customers

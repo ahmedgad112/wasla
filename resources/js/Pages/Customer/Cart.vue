@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import { useCartStore } from '../../Stores/cartStore';
 import type { SharedInertiaProps } from '../../Types';
 import {
@@ -57,7 +56,6 @@ const onImageError = (e: Event): void => {
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="سلة التسوق" />
 
         <div v-if="cart.items.length === 0 || !cart.restaurant" class="px-4 py-16 text-center space-y-6">
@@ -239,5 +237,4 @@ const onImageError = (e: Event): void => {
                 </div>
             </div>
         </div>
-    </GuestLayout>
 </template>

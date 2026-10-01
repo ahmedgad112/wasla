@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,6 +34,7 @@ class Order extends Model
         'customer_notes',
         'restaurant_notes',
         'delivered_at',
+        'archived_at',
     ];
 
     protected function casts(): array
@@ -48,7 +50,18 @@ class Order extends Model
             'latitude' => 'float',
             'longitude' => 'float',
             'delivered_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public function scopeArchived(Builder $query): Builder
+    {
+        return $query->whereNotNull('archived_at');
+    }
+
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return $query->whereNull('archived_at');
     }
 
     public function customer(): BelongsTo
@@ -86,6 +99,7 @@ class Order extends Model
         if ($this->latitude && $this->longitude) {
             return "https://www.openstreetmap.org/?mlat={$this->latitude}&mlon={$this->longitude}#map=17/{$this->latitude}/{$this->longitude}";
         }
-        return "https://www.openstreetmap.org/search?query=" . urlencode($this->address);
+
+        return 'https://www.openstreetmap.org/search?query='.urlencode($this->address);
     }
 }

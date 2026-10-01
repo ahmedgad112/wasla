@@ -184,6 +184,7 @@ export interface Order {
     customer_notes?: string;
     restaurant_notes?: string;
     delivered_at?: string;
+    archived_at?: string | null;
     created_at: string;
     updated_at: string;
     customer?: Customer;

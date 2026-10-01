@@ -22,6 +22,7 @@ import type { AvailabilityStatus, SharedInertiaProps } from '../Types';
 import { useThemeMode } from '../composables/useThemeMode';
 import { availabilityMeta, resolveAvailability } from '../lib/restaurantAvailability';
 import { usePermission } from '../composables/usePermission';
+import { warmNavigation } from '../lib/warmNavigation';
 
 const props = defineProps<{
     title?: string;
@@ -111,6 +112,8 @@ const setAvailability = (status: AvailabilityStatus): void => {
 const closeSidebar = (): void => {
     sidebarOpen.value = false;
 };
+
+warmNavigation(() => visibleNavItems.value.map((item) => item.href));
 </script>
 
 <template>

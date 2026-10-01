@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import type { Offer, PaginatedResponse } from '../../Types';
 import { Tag, Store } from '@lucide/vue';
 
@@ -13,7 +12,6 @@ const items = computed(() => props.offers?.data || []);
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="العروض" />
 
         <div class="px-4 pt-4 sm:px-6 lg:px-8">
@@ -81,5 +79,4 @@ const items = computed(() => props.offers?.data || []);
                 </div>
             </template>
         </div>
-    </GuestLayout>
 </template>

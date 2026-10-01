@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import CustomerLayout from '../../Layouts/CustomerLayout.vue';
 import type { Customer, Order } from '../../Types';
 import {
     ShoppingBag,
@@ -37,7 +36,7 @@ const formatOrderDate = (date: string): string => new Date(date).toLocaleDateStr
 </script>
 
 <template>
-    <CustomerLayout title="لوحة تحكم الطالب والعميل" :customer="customer">
+    <div class="px-4 py-4">
         <Head title="لوحة تحكم الطالب والعميل" />
 
         <div class="space-y-8">
@@ -282,5 +281,5 @@ const formatOrderDate = (date: string): string => new Date(date).toLocaleDateStr
                 </div>
             </div>
         </div>
-    </CustomerLayout>
+    </div>
 </template>

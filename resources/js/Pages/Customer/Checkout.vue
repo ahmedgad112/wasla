@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import type { Customer, CustomerAddress } from '../../Types';
 import { useCartStore } from '../../Stores/cartStore';
 import { BORG_EL_ARAB_UNIVERSITIES, calculateDistanceKm } from '../../constants/universities';
@@ -233,7 +232,6 @@ const handlePlaceOrder = (): void => {
 </script>
 
 <template>
-    <GuestLayout>
         <template v-if="cart.items.length === 0 || !cart.restaurant">
             <div class="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
                 <div class="w-20 h-20 rounded-3xl bg-orange-100 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center mx-auto shadow-inner">
@@ -610,5 +608,4 @@ const handlePlaceOrder = (): void => {
                 </form>
             </div>
         </template>
-    </GuestLayout>
 </template>

@@ -17,16 +17,12 @@ class AuthController extends Controller
 {
     public function __construct(protected AuthService $authService) {}
 
-    // =====================================================
-    // CUSTOMER AUTH
-    // =====================================================
-
-    public function showCustomerLogin(): Response
+    public function showLogin(): Response
     {
-        return Inertia::render('Auth/CustomerLogin');
+        return Inertia::render('Auth/Login');
     }
 
-    public function customerLogin(Request $request): RedirectResponse
+    public function login(Request $request): RedirectResponse
     {
         $request->validate([
             'email' => 'required|string',
@@ -34,14 +30,13 @@ class AuthController extends Controller
             'remember' => 'sometimes|boolean',
         ]);
 
-        $this->authService->authenticate(
-            AuthService::PORTAL_CUSTOMER,
+        $user = $this->authService->login(
             $request->email,
             $request->password,
             $request->boolean('remember')
         );
 
-        return redirect()->route('customer.dashboard');
+        return redirect()->route($this->authService->dashboardRouteName($user));
     }
 
     public function showCustomerRegister(): Response
@@ -94,101 +89,10 @@ class AuthController extends Controller
         return redirect()->route('customer.dashboard');
     }
 
-    // =====================================================
-    // ADMIN AUTH
-    // =====================================================
-
-    public function showAdminLogin(): Response
+    public function logout(): RedirectResponse
     {
-        return Inertia::render('Auth/AdminLogin');
-    }
-
-    public function adminLogin(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'email' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
-        $this->authService->authenticate(
-            AuthService::PORTAL_ADMIN,
-            $request->email,
-            $request->password,
-            $request->boolean('remember')
-        );
-
-        return redirect()->route('admin.dashboard');
-    }
-
-    // =====================================================
-    // RESTAURANT AUTH
-    // =====================================================
-
-    public function showRestaurantLogin(): Response
-    {
-        return Inertia::render('Auth/RestaurantLogin');
-    }
-
-    public function restaurantLogin(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'email' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
-        $this->authService->authenticate(
-            AuthService::PORTAL_RESTAURANT,
-            $request->email,
-            $request->password,
-            $request->boolean('remember')
-        );
-
-        return redirect()->route('restaurant.dashboard');
-    }
-
-    // =====================================================
-    // DELIVERY AUTH
-    // =====================================================
-
-    public function showDeliveryLogin(): Response
-    {
-        return Inertia::render('Auth/DeliveryLogin');
-    }
-
-    public function deliveryLogin(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'email' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
-        $this->authService->authenticate(
-            AuthService::PORTAL_DELIVERY,
-            $request->email,
-            $request->password,
-            $request->boolean('remember')
-        );
-
-        return redirect()->route('delivery.dashboard');
-    }
-
-    // =====================================================
-    // LOGOUT (All portals)
-    // =====================================================
-
-    public function logout(Request $request): RedirectResponse
-    {
-        $user = auth()->user();
-        $role = $user?->role;
-
         $this->authService->logout();
 
-        // Redirect to appropriate login page based on role
-        return match (true) {
-            in_array($role, ['SUPER_ADMIN', 'ADMIN', 'PLATFORM_STAFF']) => redirect()->route('admin.login'),
-            in_array($role, ['RESTAURANT_OWNER', 'RESTAURANT_STAFF']) => redirect()->route('restaurant.login'),
-            $role === 'DELIVERY_DRIVER' => redirect()->route('delivery.login'),
-            default => redirect()->route('login'),
-        };
+        return redirect()->route('login');
     }
 }

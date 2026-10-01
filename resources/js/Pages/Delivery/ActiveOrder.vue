@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import DeliveryLayout from '../../Layouts/DeliveryLayout.vue';
 import type { DeliveryDriver, Order } from '../../Types';
 import DeliveryRouteMap from '../../Components/DeliveryRouteMap.vue';
 import { Bike, Phone, MapPin, Store, CheckCircle2, ArrowRight } from '@lucide/vue';
@@ -18,7 +17,6 @@ const handleUpdateStatus = (nextStatus: 'OUT_FOR_DELIVERY' | 'DELIVERED'): void 
 </script>
 
 <template>
-    <DeliveryLayout :title="`تفاصيل توصيل طلب ${order.order_number}`">
         <Head :title="`مهمة التوصيل ${order.order_number}`" />
 
         <div class="space-y-6">
@@ -152,5 +150,4 @@ const handleUpdateStatus = (nextStatus: 'OUT_FOR_DELIVERY' | 'DELIVERED'): void 
                 <span class="text-2xl font-black text-amber-600 dark:text-amber-400">{{ order.total_amount }} ج.م</span>
             </div>
         </div>
-    </DeliveryLayout>
 </template>

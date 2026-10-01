@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3';
-import DeliveryLayout from '../../Layouts/DeliveryLayout.vue';
 import type { DeliveryDriver } from '../../Types';
 import { Power, Store } from '@lucide/vue';
 import { computed } from 'vue';
@@ -27,7 +26,6 @@ const toggleAvailability = (): void => {
 </script>
 
 <template>
-    <DeliveryLayout title="حساب الطيار" :is-available="isAvailable">
         <Head title="حساب الطيار" />
 
         <div class="space-y-6">
@@ -95,5 +93,4 @@ const toggleAvailability = (): void => {
                 </form>
             </div>
         </div>
-    </DeliveryLayout>
 </template>

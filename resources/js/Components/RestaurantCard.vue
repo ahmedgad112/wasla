@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { computed, onMounted } from 'vue';
+import { Link, router } from '@inertiajs/vue3';
 import type { Restaurant } from '../Types';
 import { Clock, Bike, Star } from '@lucide/vue';
 import { availabilityMeta } from '../lib/restaurantAvailability';
 import { resolveMediaUrl } from '../lib/media';
 import { useAvailabilityStore } from '../Stores/availabilityStore';
+import { NAVIGATION_CACHE_FOR } from '../lib/warmNavigation';
+
+let restaurantDetailsReady = false;
 
 const props = defineProps<{
     restaurant: Restaurant;
@@ -53,6 +56,19 @@ const availabilityClass = computed(() => {
 const onImageError = (event: Event): void => {
     (event.target as HTMLImageElement).src = '/images/sandwich-foul.jpg';
 };
+
+const warmRestaurant = (): void => {
+    router.prefetch(`/restaurants/${liveRestaurant.value.slug}`, {}, { cacheFor: [...NAVIGATION_CACHE_FOR] });
+};
+
+onMounted(() => {
+    if (restaurantDetailsReady) {
+        return;
+    }
+
+    restaurantDetailsReady = true;
+    void import('../Pages/Public/RestaurantDetails.vue');
+});
 </script>
 
 <template>
@@ -60,6 +76,7 @@ const onImageError = (event: Event): void => {
         :href="`/restaurants/${liveRestaurant.slug}`"
         prefetch
         class="block transition-transform active:scale-[0.99]"
+        @pointerdown="warmRestaurant"
     >
         <article class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-100 dark:bg-stone-900 dark:ring-stone-800">
             <div class="relative h-36 overflow-hidden bg-stone-100 dark:bg-stone-800 sm:h-40">

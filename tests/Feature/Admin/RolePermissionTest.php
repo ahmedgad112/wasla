@@ -104,6 +104,11 @@ class RolePermissionTest extends TestCase
         $this->assertContains('roles.manage', PermissionCatalog::names());
         $this->assertContains('restaurant.settings', PermissionCatalog::defaultGrants()['RESTAURANT_OWNER']);
         $this->assertNotContains('roles.manage', PermissionCatalog::defaultGrants()['ADMIN']);
+        $this->assertSame('orders.manage', PermissionCatalog::forRoute('admin.orders.archive', 'POST'));
+        $this->assertSame('orders.manage', PermissionCatalog::forRoute('admin.orders.destroy', 'DELETE'));
+        $this->assertSame('orders.view', PermissionCatalog::forRoute('admin.orders.index', 'GET'));
+        $this->assertContains('orders.manage', PermissionCatalog::defaultGrants()['ADMIN']);
+        $this->assertNotContains('orders.manage', PermissionCatalog::defaultGrants()['PLATFORM_STAFF']);
         $this->assertSame('restaurants.delete', PermissionCatalog::forRoute('admin.restaurants.delete', 'POST'));
         $this->assertSame('users.manage', PermissionCatalog::forRoute('admin.users.update', 'PUT'));
         $this->assertSame('customer.profile', PermissionCatalog::forRoute('customer.address.store', 'POST'));

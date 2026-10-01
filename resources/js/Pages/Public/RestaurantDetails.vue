@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import type { Category, MenuItem, MenuItemAddon, Offer, Restaurant } from '../../Types';
 import { useCartStore } from '../../Stores/cartStore';
 import CategoryIcon from '../../Components/CategoryIcon.vue';
@@ -307,7 +306,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <GuestLayout hide-header>
         <Head :title="`${liveRestaurant.name} — اطلب أونلاين`" />
 
         <div class="relative mx-auto w-full max-w-3xl bg-white dark:bg-stone-950">
@@ -664,5 +662,4 @@ onBeforeUnmount(() => {
                 </div>
             </div>
         </div>
-    </GuestLayout>
 </template>

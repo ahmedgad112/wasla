@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import CustomerLayout from '../../Layouts/CustomerLayout.vue';
 import type { Customer } from '../../Types';
 import {
     User,
@@ -81,7 +80,7 @@ const confirmDeleteAddress = (): void => {
 </script>
 
 <template>
-    <CustomerLayout title="الملف الشخصي والعناوين" :customer="customer">
+    <div class="px-4 py-4">
         <Head title="الملف الشخصي والعناوين" />
 
         <div class="space-y-8">
@@ -351,5 +350,5 @@ const confirmDeleteAddress = (): void => {
             @confirm="confirmDeleteAddress"
             @cancel="confirmDeleteAddressId = null"
         />
-    </CustomerLayout>
+    </div>
 </template>

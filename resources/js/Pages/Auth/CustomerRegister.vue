@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import { UserPlus, Mail, Lock, Phone, User as UserIcon, Eye, EyeOff, Check } from '@lucide/vue';
 
 const form = useForm({
@@ -75,7 +74,6 @@ const submit = (): void => {
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="إنشاء حساب جديد" />
 
         <div class="flex items-center justify-center px-4 py-6">
@@ -261,5 +259,4 @@ const submit = (): void => {
                 </div>
             </div>
         </div>
-    </GuestLayout>
 </template>

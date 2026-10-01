@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import { MapPin, Phone, Clock, Send, CheckCircle2, MessageSquare } from '@lucide/vue';
 
 const submitted = ref(false);
@@ -19,7 +18,6 @@ const handleSubmit = (): void => {
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="تواصل معنا والدعم الفني" />
 
         <div class="bg-gradient-to-b from-orange-50 to-transparent dark:from-stone-900 py-6">
@@ -158,5 +156,4 @@ const handleSubmit = (): void => {
                 </div>
             </div>
         </div>
-    </GuestLayout>
 </template>

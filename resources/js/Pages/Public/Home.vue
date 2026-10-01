@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import GuestLayout from '../../Layouts/GuestLayout.vue';
 import RestaurantCard from '../../Components/RestaurantCard.vue';
 import type { Restaurant, Offer, SharedInertiaProps } from '../../Types';
 import { useAvailabilityStore } from '../../Stores/availabilityStore';
@@ -92,7 +91,6 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
 </script>
 
 <template>
-    <GuestLayout>
         <Head title="اطلب من مطاعم الجامعة" />
 
         <div class="space-y-5 pb-4">
@@ -133,6 +131,7 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
             <section class="px-4 sm:px-6 lg:px-8">
                 <Link
                     :href="auth?.user ? '/customer/profile' : '/register'"
+                    prefetch
                     class="flex items-center justify-between rounded-2xl bg-gradient-to-l from-orange-500 to-amber-500 px-4 py-3.5 text-white shadow-lg shadow-orange-500/20"
                 >
                     <div class="flex items-center gap-3">
@@ -154,7 +153,7 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                         <Percent class="h-4 w-4 text-orange-500" />
                         عروض النهاردة
                     </h2>
-                    <Link href="/offers" class="shrink-0 text-[11px] font-bold text-orange-600">
+                    <Link href="/offers" prefetch class="shrink-0 text-[11px] font-bold text-orange-600">
                         الكل
                     </Link>
                 </div>
@@ -163,6 +162,7 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                         v-for="offer in activeOffers.slice(0, 6)"
                         :key="offer.id"
                         :href="offer.restaurant ? `/restaurants/${offer.restaurant.slug}` : '/offers'"
+                        prefetch
                         class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-100 dark:bg-stone-900 dark:ring-stone-800"
                     >
                         <div class="flex h-24 items-end bg-gradient-to-br from-orange-500 via-amber-500 to-red-500 p-3">
@@ -188,7 +188,7 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                         <Store class="h-4 w-4 text-orange-500" />
                         مطاعم قريبة منك
                     </h2>
-                    <Link href="/restaurants" class="shrink-0 text-[11px] font-bold text-orange-600">
+                    <Link href="/restaurants" prefetch class="shrink-0 text-[11px] font-bold text-orange-600">
                         عرض الكل
                     </Link>
                 </div>
@@ -210,6 +210,7 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
             <section class="px-4 sm:px-6 lg:px-8">
                 <Link
                     href="/leaderboard"
+                    prefetch
                     class="flex items-center justify-between rounded-2xl bg-stone-900 px-4 py-3.5 text-white"
                 >
                     <div class="flex items-center gap-3">
@@ -232,5 +233,4 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                 </Link>
             </section>
         </div>
-    </GuestLayout>
 </template>
