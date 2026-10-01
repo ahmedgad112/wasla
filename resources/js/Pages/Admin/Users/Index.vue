@@ -155,6 +155,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
             </div>
 
             <Link
+                v-if="$can('users.manage')"
                 href="/admin/users/create"
                 class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white rounded-2xl font-black text-xs shadow-md shadow-orange-600/20 transition self-start sm:self-auto"
             >
@@ -251,6 +252,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
 
                             <td class="px-6 py-4">
                                 <button
+                                    v-if="$can('users.manage')"
                                     type="button"
                                     :class="[
                                         'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition',
@@ -278,6 +280,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                             <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <Link
+                                        v-if="$can('users.manage')"
                                         :href="`/admin/users/${user.id}/edit`"
                                         class="p-2 rounded-xl text-stone-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-stone-800 transition"
                                         title="تعديل المستخدم"
@@ -285,6 +288,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                                         <Edit class="w-4 h-4" />
                                     </Link>
                                     <button
+                                        v-if="$can('users.manage')"
                                         type="button"
                                         class="p-2 rounded-xl text-stone-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-stone-800 transition"
                                         title="حذف المستخدم"

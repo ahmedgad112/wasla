@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -48,13 +49,8 @@ class UserController extends Controller
 
     public function create(): Response
     {
-        $roles = Role::pluck('name');
-        if ($roles->isEmpty()) {
-            $roles = collect(['ADMIN', 'PLATFORM_STAFF']);
-        }
-
         return Inertia::render('Admin/Users/Create', [
-            'roles' => $roles,
+            'roles' => $this->formRoles(),
         ]);
     }
 
@@ -73,6 +69,8 @@ class UserController extends Controller
             'password.min' => 'كلمة المرور يجب ألا تقل عن 8 أحرف.',
             'password.confirmed' => 'تأكيد كلمة المرور غير مطابق.',
         ]);
+
+        $this->assertCanAssignRole($request->user(), $validated['role']);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -94,14 +92,10 @@ class UserController extends Controller
     public function edit(int $id): Response
     {
         $user = User::findOrFail($id);
-        $roles = Role::pluck('name');
-        if ($roles->isEmpty()) {
-            $roles = collect(['SUPER_ADMIN', 'ADMIN', 'PLATFORM_STAFF', 'RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'DELIVERY_DRIVER', 'CUSTOMER']);
-        }
 
         return Inertia::render('Admin/Users/Edit', [
             'user' => $user,
-            'roles' => $roles,
+            'roles' => $this->formRoles(),
         ]);
     }
 
@@ -123,12 +117,7 @@ class UserController extends Controller
             'password.min' => 'كلمة المرور يجب ألا تقل عن 8 أحرف.',
         ]);
 
-        $actor = $request->user();
-        if ($actor && ! $actor->isSuperAdmin() && ($user->isSuperAdmin() || $validated['role'] === 'SUPER_ADMIN')) {
-            throw ValidationException::withMessages([
-                'role' => 'فقط المدير العام يمكنه تعديل حساب مدير عام أو منح هذا الدور.',
-            ]);
-        }
+        $this->assertCanAssignRole($request->user(), $validated['role'], $user);
 
         $removesLastSuperAdmin = $user->isSuperAdmin()
             && ($validated['role'] !== 'SUPER_ADMIN' || ! $validated['is_active'])
@@ -180,11 +169,60 @@ class UserController extends Controller
     public function toggleActive(int $id): RedirectResponse
     {
         $user = User::findOrFail($id);
+        $actor = auth()->user();
+
+        if ($user->isSuperAdmin() && ! $actor?->isSuperAdmin()) {
+            return back()->with('error', 'فقط المدير العام يمكنه تعطيل حساب مدير عام.');
+        }
+
+        if (
+            $user->isSuperAdmin()
+            && $user->is_active
+            && ! User::query()
+                ->where('role', 'SUPER_ADMIN')
+                ->where('is_active', true)
+                ->whereKeyNot($user->id)
+                ->exists()
+        ) {
+            return back()->with('error', 'لا يمكن تعطيل آخر مدير عام.');
+        }
+
         $user->update(['is_active' => ! $user->is_active]);
         $status = $user->is_active ? 'تفعيل' : 'تعطيل';
         ActivityLog::log('USER_TOGGLE_ACTIVE', 'User', $user->id, null, ['is_active' => $user->is_active]);
 
         return back()->with('success', "تم {$status} المستخدم.");
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function formRoles(): Collection
+    {
+        $roles = Role::pluck('name');
+
+        if ($roles->isEmpty()) {
+            $roles = collect($this->assignableRoles());
+        }
+
+        if (! auth()->user()?->isSuperAdmin()) {
+            $roles = $roles->reject(fn (string $role): bool => $role === 'SUPER_ADMIN')->values();
+        }
+
+        return $roles;
+    }
+
+    private function assertCanAssignRole(?User $actor, string $role, ?User $target = null): void
+    {
+        if ($actor?->isSuperAdmin()) {
+            return;
+        }
+
+        if ($role === 'SUPER_ADMIN' || $target?->isSuperAdmin()) {
+            throw ValidationException::withMessages([
+                'role' => 'فقط المدير العام يمكنه تعديل حساب مدير عام أو منح هذا الدور.',
+            ]);
+        }
     }
 
     /**

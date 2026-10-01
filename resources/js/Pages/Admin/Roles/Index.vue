@@ -1,96 +1,165 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { Shield, Users, Check } from '@lucide/vue';
+import { reactive, watch } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { Shield, Users } from '@lucide/vue';
 
-interface Role {
+interface PermissionItem {
     name: string;
+    label: string;
+}
+
+interface CatalogGroup {
+    key: string;
+    label: string;
+    permissions: PermissionItem[];
+}
+
+interface RoleRow {
+    name: string;
+    label: string;
     users_count: number;
     permissions: string[];
 }
 
-defineProps<{
-    roles: Role[];
+const props = defineProps<{
+    roles: RoleRow[];
+    catalog: CatalogGroup[];
 }>();
 
-const roleLabels: Record<string, string> = {
-    SUPER_ADMIN: 'مدير عام',
-    ADMIN: 'مدير',
-    PLATFORM_STAFF: 'موظف منصة',
-    RESTAURANT_OWNER: 'مالك مطعم',
-    RESTAURANT_STAFF: 'موظف مطعم',
-    DELIVERY_DRIVER: 'سائق توصيل',
-    CUSTOMER: 'عميل',
-};
+const drafts = reactive<Record<string, string[]>>({});
+const saving = reactive<Record<string, boolean>>({});
 
-const roleColors: Record<string, string> = {
-    SUPER_ADMIN: 'from-red-500/20 to-red-600/10 border-red-500/30',
-    ADMIN: 'from-orange-500/20 to-orange-600/10 border-orange-500/30',
-    PLATFORM_STAFF: 'from-amber-500/20 to-amber-600/10 border-amber-500/30',
-    RESTAURANT_OWNER: 'from-indigo-500/20 to-indigo-600/10 border-indigo-500/30',
-    RESTAURANT_STAFF: 'from-blue-500/20 to-blue-600/10 border-blue-500/30',
-    DELIVERY_DRIVER: 'from-purple-500/20 to-purple-600/10 border-purple-500/30',
-    CUSTOMER: 'from-stone-500/20 to-stone-600/10 border-stone-500/30',
-};
+function syncDrafts(): void {
+    props.roles.forEach((role) => {
+        drafts[role.name] = [...role.permissions];
+    });
+}
 
-const permLabels: Record<string, string> = {
-    'restaurants.view': 'عرض المطاعم',
-    'restaurants.create': 'إنشاء المطاعم',
-    'restaurants.update': 'تعديل المطاعم',
-    'restaurants.delete': 'حذف المطاعم',
-    'orders.view': 'عرض الطلبات',
-    'orders.manage': 'إدارة الطلبات',
-    'finance.view': 'عرض المالية',
-    'finance.manage': 'إدارة المالية',
-    'users.view': 'عرض المستخدمين',
-    'users.manage': 'إدارة المستخدمين',
-    'settings.manage': 'إدارة الإعدادات',
-};
+watch(() => props.roles, syncDrafts, { immediate: true, deep: true });
+
+function hasPermission(roleName: string, permission: string): boolean {
+    return (drafts[roleName] ?? []).includes(permission);
+}
+
+function togglePermission(role: RoleRow, permission: string): void {
+    const current = drafts[role.name] ?? [];
+    drafts[role.name] = current.includes(permission)
+        ? current.filter((item) => item !== permission)
+        : [...current, permission];
+}
+
+function setGroup(role: RoleRow, permissions: PermissionItem[], enabled: boolean): void {
+    const names = permissions.map((item) => item.name);
+    const current = new Set(drafts[role.name] ?? []);
+
+    names.forEach((name) => {
+        if (enabled) {
+            current.add(name);
+        } else {
+            current.delete(name);
+        }
+    });
+
+    drafts[role.name] = [...current];
+}
+
+function groupEnabled(roleName: string, permissions: PermissionItem[]): boolean {
+    return permissions.every((item) => hasPermission(roleName, item.name));
+}
+
+function saveRole(role: RoleRow): void {
+    saving[role.name] = true;
+    router.put(`/admin/roles/${role.name}`, {
+        permissions: drafts[role.name] ?? [],
+    }, {
+        preserveScroll: true,
+        onFinish: () => {
+            saving[role.name] = false;
+        },
+    });
+}
 </script>
 
 <template>
     <Head title="الأدوار والصلاحيات" />
 
-    <div class="space-y-6" dir="rtl">
+    <div class="space-y-6 pb-12" dir="rtl">
         <div>
-            <h1 class="text-2xl font-bold text-stone-900">الأدوار والصلاحيات</h1>
-            <p class="text-stone-400 text-sm mt-1">نظرة عامة على أدوار المستخدمين وصلاحياتهم</p>
+            <div class="mb-1 flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-orange-500" />
+                <span class="text-xs font-bold text-orange-600 dark:text-orange-400">لوحة التحكم الإدارية</span>
+            </div>
+            <h1 class="text-2xl font-black text-stone-900 dark:text-white sm:text-3xl">الأدوار والصلاحيات</h1>
+            <p class="mt-1 text-xs text-stone-500 dark:text-stone-400 sm:text-sm">
+                فعّل أو أوقف كل قسم وكل زرار لكل دور، بما فيها المدير العام.
+            </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <div
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <section
                 v-for="role in roles"
                 :key="role.name"
-                :class="['bg-gradient-to-br border rounded-2xl p-6', roleColors[role.name] ?? roleColors.CUSTOMER]"
+                class="rounded-3xl border border-stone-200 bg-white p-5 shadow-xs dark:border-stone-800 dark:bg-stone-900"
             >
-                <div class="flex items-start justify-between mb-4">
+                <div class="mb-4 flex items-start justify-between gap-3">
                     <div>
-                        <div class="flex items-center gap-2">
-                            <Shield class="w-5 h-5 text-stone-900/70" />
-                            <h2 class="text-lg font-bold text-stone-900">{{ roleLabels[role.name] ?? role.name }}</h2>
-                        </div>
-                        <p class="text-xs text-stone-400 mt-1 font-mono">{{ role.name }}</p>
+                        <h2 class="flex items-center gap-2 text-lg font-black text-stone-900 dark:text-white">
+                            <Shield class="h-5 w-5 text-orange-500" />
+                            {{ role.label }}
+                        </h2>
+                        <p class="mt-1 font-mono text-[11px] text-stone-400">{{ role.name }}</p>
                     </div>
-                    <div class="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg">
-                        <Users class="w-3.5 h-3.5 text-stone-300" />
-                        <span class="text-sm text-stone-300 font-semibold">{{ role.users_count }}</span>
+                    <div class="flex items-center gap-1 rounded-xl bg-stone-100 px-2.5 py-1 text-xs font-bold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                        <Users class="h-3.5 w-3.5" />
+                        {{ role.users_count }}
                     </div>
                 </div>
 
-                <div v-if="role.permissions.length > 0" class="space-y-2">
-                    <p class="text-xs text-stone-500 uppercase font-medium mb-2">الصلاحيات</p>
-                    <div class="flex flex-wrap gap-1.5">
-                        <span
-                            v-for="perm in role.permissions"
-                            :key="perm"
-                            class="flex items-center gap-1 px-2 py-0.5 bg-white/10 text-stone-300 rounded text-xs"
-                        >
-                            <Check class="w-2.5 h-2.5 text-emerald-400" />
-                            {{ permLabels[perm] ?? perm }}
-                        </span>
+                <div class="space-y-4">
+                    <div v-for="group in catalog" :key="`${role.name}-${group.key}`">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <p class="text-xs font-black text-stone-700 dark:text-stone-200">{{ group.label }}</p>
+                            <button
+                                type="button"
+                                class="text-[11px] font-bold text-orange-600 dark:text-orange-400"
+                                @click="setGroup(role, group.permissions, !groupEnabled(role.name, group.permissions))"
+                            >
+                                {{ groupEnabled(role.name, group.permissions) ? 'إلغاء المجموعة' : 'تحديد المجموعة' }}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <label
+                                v-for="permission in group.permissions"
+                                :key="`${role.name}-${permission.name}`"
+                                :class="[
+                                    'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold',
+                                    hasPermission(role.name, permission.name)
+                                        ? 'border-orange-200 bg-orange-50 text-stone-800 dark:border-orange-900 dark:bg-orange-950/30 dark:text-stone-100'
+                                        : 'border-stone-200 bg-stone-50 text-stone-500 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-400',
+                                    'cursor-pointer',
+                                ]"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="accent-orange-600"
+                                    :checked="hasPermission(role.name, permission.name)"
+                                    @change="togglePermission(role, permission.name)"
+                                />
+                                <span>{{ permission.label }}</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
-                <p v-else class="text-stone-500 text-xs">صلاحيات محدودة (حسب الدور)</p>
-            </div>
+
+                <button
+                    type="button"
+                    class="mt-5 w-full rounded-2xl bg-orange-600 py-2.5 text-xs font-black text-white transition hover:bg-orange-700 disabled:opacity-60"
+                    :disabled="saving[role.name]"
+                    @click="saveRole(role)"
+                >
+                    {{ saving[role.name] ? 'جاري الحفظ...' : 'حفظ صلاحيات هذا الدور' }}
+                </button>
+            </section>
         </div>
     </div>
 </template>

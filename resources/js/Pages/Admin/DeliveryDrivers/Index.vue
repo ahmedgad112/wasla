@@ -67,6 +67,7 @@ const goToPage = (page: number): void => {
                 </p>
             </div>
             <Link
+                v-if="$can('drivers.manage')"
                 href="/admin/delivery-drivers/create"
                 class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow transition"
             >
@@ -174,6 +175,7 @@ const goToPage = (page: number): void => {
                         <td class="px-5 py-4">
                             <div class="flex items-center justify-end gap-2">
                                 <button
+                                    v-if="$can('drivers.manage')"
                                     type="button"
                                     :title="driver.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'"
                                     class="p-1.5 rounded-lg text-stone-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 transition"
@@ -183,6 +185,7 @@ const goToPage = (page: number): void => {
                                     <ToggleLeft v-else class="w-4 h-4" />
                                 </button>
                                 <button
+                                    v-if="$can('drivers.manage')"
                                     type="button"
                                     title="حذف المندوب"
                                     class="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition"

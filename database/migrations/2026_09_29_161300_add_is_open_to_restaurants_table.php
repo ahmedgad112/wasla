@@ -15,6 +15,14 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasColumn('restaurants', 'is_open')) {
+            return;
+        }
+
+        Schema::table('restaurants', function (Blueprint $table) {
+            $table->dropIndex(['is_open']);
+        });
+
         Schema::table('restaurants', function (Blueprint $table) {
             $table->dropColumn('is_open');
         });

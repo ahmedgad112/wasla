@@ -62,50 +62,26 @@ class OrderService
                 $selectedOptions = [];
                 if (! empty($itemInput['options'])) {
                     foreach ($itemInput['options'] as $opt) {
-                        if (is_array($opt) && (isset($opt['price']) || isset($opt['optionName']) || isset($opt['valueName']))) {
-                            $optPrice = (float) ($opt['price'] ?? 0);
-                            $optionsPrice += $optPrice;
-                            $selectedOptions[] = [
-                                'option_name' => $opt['optionName'] ?? $opt['option_name'] ?? 'خيار',
-                                'value_name' => $opt['valueName'] ?? $opt['value_name'] ?? '',
-                                'price' => $optPrice,
-                            ];
-                        } elseif (is_numeric($opt)) {
-                            $optionValue = MenuItemOptionValue::find($opt);
-                            if ($optionValue) {
-                                $optionsPrice += (float) $optionValue->price;
-                                $selectedOptions[] = [
-                                    'option_name' => $optionValue->option->name ?? 'خيار',
-                                    'value_name' => $optionValue->name,
-                                    'price' => (float) $optionValue->price,
-                                ];
-                            }
-                        }
+                        $optionValue = $this->optionValueForItem($menuItem->id, $opt);
+                        $optPrice = (float) $optionValue->price;
+                        $optionsPrice += $optPrice;
+                        $selectedOptions[] = [
+                            'option_name' => $optionValue->option->name ?? 'خيار',
+                            'value_name' => $optionValue->name,
+                            'price' => $optPrice,
+                        ];
                     }
                 }
 
                 $selectedAddons = [];
                 if (! empty($itemInput['addons'])) {
                     foreach ($itemInput['addons'] as $add) {
-                        if (is_array($add) && isset($add['id'])) {
-                            $addon = MenuItemAddon::where('is_available', true)->find($add['id']);
-                            if ($addon) {
-                                $addonsPrice += (float) $addon->price;
-                                $selectedAddons[] = [
-                                    'name' => $addon->name,
-                                    'price' => (float) $addon->price,
-                                ];
-                            }
-                        } elseif (is_numeric($add)) {
-                            $addon = MenuItemAddon::where('is_available', true)->find($add);
-                            if ($addon) {
-                                $addonsPrice += (float) $addon->price;
-                                $selectedAddons[] = [
-                                    'name' => $addon->name,
-                                    'price' => (float) $addon->price,
-                                ];
-                            }
-                        }
+                        $addon = $this->addonForItem($menuItem->id, $add);
+                        $addonsPrice += (float) $addon->price;
+                        $selectedAddons[] = [
+                            'name' => $addon->name,
+                            'price' => (float) $addon->price,
+                        ];
                     }
                 }
 
@@ -183,8 +159,6 @@ class OrderService
 
                     $distance = $this->calculateDistanceKm($restLat, $restLng, $custLat, $custLng);
                     $deliveryFee = round($baseFee + ($distance * $feePerKm), 2);
-                } elseif (isset($orderData['delivery_fee']) && (float) $orderData['delivery_fee'] > 0) {
-                    $deliveryFee = (float) $orderData['delivery_fee'];
                 }
             }
 
@@ -315,6 +289,12 @@ class OrderService
             ]);
         }
 
+        if (! in_array($order->status, ['READY_FOR_PICKUP', 'ASSIGNED_TO_DRIVER'], true)) {
+            throw ValidationException::withMessages([
+                'driver' => 'يمكن إسناد المندوب فقط بعد تجهيز الطلب.',
+            ]);
+        }
+
         return DB::transaction(function () use ($order, $driver, $userId) {
             $order->assigned_delivery_id = $driver->id;
             $order->status = 'ASSIGNED_TO_DRIVER';
@@ -333,6 +313,63 @@ class OrderService
 
             return $order->fresh(['items', 'restaurant', 'customer.user', 'deliveryDriver']);
         });
+    }
+
+    private function optionValueForItem(int $menuItemId, mixed $opt): MenuItemOptionValue
+    {
+        $query = MenuItemOptionValue::query()
+            ->whereHas('option', fn ($option) => $option->where('menu_item_id', $menuItemId));
+
+        $optionValue = null;
+
+        if (is_numeric($opt)) {
+            $optionValue = $query->find($opt);
+        } elseif (is_array($opt)) {
+            $valueId = $opt['id'] ?? $opt['value_id'] ?? $opt['option_value_id'] ?? $opt['valueId'] ?? null;
+
+            if (is_numeric($valueId)) {
+                $optionValue = $query->find($valueId);
+            } else {
+                $optionName = $opt['optionName'] ?? $opt['option_name'] ?? null;
+                $valueName = $opt['valueName'] ?? $opt['value_name'] ?? null;
+
+                if (is_string($optionName) && $optionName !== '' && is_string($valueName) && $valueName !== '') {
+                    $optionValue = $query
+                        ->where('name', $valueName)
+                        ->whereHas('option', fn ($option) => $option
+                            ->where('menu_item_id', $menuItemId)
+                            ->where('name', $optionName))
+                        ->first();
+                }
+            }
+        }
+
+        if (! $optionValue) {
+            throw ValidationException::withMessages([
+                'items' => 'أحد خيارات الصنف غير تابع لهذا الطبق.',
+            ]);
+        }
+
+        return $optionValue;
+    }
+
+    private function addonForItem(int $menuItemId, mixed $add): MenuItemAddon
+    {
+        $addonId = is_array($add) ? ($add['id'] ?? null) : (is_numeric($add) ? $add : null);
+        $addon = is_numeric($addonId)
+            ? MenuItemAddon::query()
+                ->where('menu_item_id', $menuItemId)
+                ->where('is_available', true)
+                ->find($addonId)
+            : null;
+
+        if (! $addon) {
+            throw ValidationException::withMessages([
+                'items' => 'إحدى الإضافات غير تابعة لهذا الطبق.',
+            ]);
+        }
+
+        return $addon;
     }
 
     /**

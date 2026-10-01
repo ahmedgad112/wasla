@@ -164,4 +164,21 @@ class UserUpdateTest extends TestCase
 
         $this->assertSame('SUPER_ADMIN', $admin->fresh()->role);
     }
+
+    public function test_platform_staff_cannot_create_a_super_admin(): void
+    {
+        $staff = $this->adminUser('PLATFORM_STAFF');
+
+        $this->actingAs($staff)
+            ->post('/admin/users', [
+                'name' => 'مدير مخترق',
+                'email' => 'evil-admin@example.com',
+                'role' => 'SUPER_ADMIN',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+            ])
+            ->assertSessionHasErrors('role');
+
+        $this->assertDatabaseMissing('users', ['email' => 'evil-admin@example.com']);
+    }
 }

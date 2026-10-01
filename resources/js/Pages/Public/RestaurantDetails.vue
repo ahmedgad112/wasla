@@ -34,14 +34,14 @@ const selectedCategoryId = ref<number | null>(null);
 const searchQuery = ref('');
 const selectedItem = ref<MenuItem | null>(null);
 const modalQuantity = ref(1);
-const selectedOptions = ref<{ [optionId: number]: { name: string; value: string; price: number } }>({});
+const selectedOptions = ref<{ [optionId: number]: { valueId: number; name: string; value: string; price: number } }>({});
 const selectedAddons = ref<MenuItemAddon[]>([]);
 const itemNotes = ref('');
 const showConflictModal = ref(false);
 const pendingItemToAdd = ref<{
     item: MenuItem;
     quantity: number;
-    options: { optionName: string; valueName: string; price: number }[];
+    options: { id?: number; optionName: string; valueName: string; price: number }[];
     addons: MenuItemAddon[];
     notes: string;
 } | null>(null);
@@ -135,11 +135,12 @@ const openItemModal = (item: MenuItem): void => {
     modalQuantity.value = 1;
     itemNotes.value = '';
     selectedAddons.value = [];
-    const initialOpts: { [key: number]: { name: string; value: string; price: number } } = {};
+    const initialOpts: { [key: number]: { valueId: number; name: string; value: string; price: number } } = {};
     if (item.options) {
         item.options.forEach((opt) => {
             if (opt.values && opt.values.length > 0) {
                 initialOpts[opt.id] = {
+                    valueId: opt.values[0].id,
                     name: opt.name,
                     value: opt.values[0].name,
                     price: Number(opt.values[0].price || 0),
@@ -155,6 +156,7 @@ const handleAddToCartFromModal = (): void => {
         return;
     }
     const optionsArray = Object.values(selectedOptions.value).map((o) => ({
+        id: o.valueId,
         optionName: o.name,
         valueName: o.value,
         price: o.price,
@@ -204,10 +206,10 @@ const toggleAddon = (addon: MenuItemAddon): void => {
     }
 };
 
-const selectOptionValue = (opt: { id: number; name: string }, val: { name: string; price: number }): void => {
+const selectOptionValue = (opt: { id: number; name: string }, val: { id: number; name: string; price: number }): void => {
     selectedOptions.value = {
         ...selectedOptions.value,
-        [opt.id]: { name: opt.name, value: val.name, price: Number(val.price) },
+        [opt.id]: { valueId: val.id, name: opt.name, value: val.name, price: Number(val.price) },
     };
 };
 

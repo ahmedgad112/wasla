@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\Restaurant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,7 +24,9 @@ class BillingHubController extends Controller
         $totalRevenue = Invoice::where('status', 'PAID')->sum('total_amount');
         $totalPending = Invoice::whereNotIn('status', ['PAID', 'CANCELLED'])->sum('total_amount')
                         - Invoice::whereNotIn('status', ['PAID', 'CANCELLED'])->sum('paid_amount');
-        $totalOverdue = Invoice::whereNotIn('status', ['PAID', 'CANCELLED'])->count();
+        $totalOverdue = Invoice::whereNotIn('status', ['PAID', 'CANCELLED'])
+            ->whereDate('due_date', '<=', now()->toDateString())
+            ->count();
         $totalCollected = Collection::sum('amount');
 
         // ── Invoices (latest 50) ─────────────────────────────────
@@ -32,7 +35,8 @@ class BillingHubController extends Controller
 
         if ($request->filled('inv_status')) {
             if ($request->inv_status === 'OVERDUE') {
-                $invoicesQuery->whereNotIn('status', ['PAID', 'CANCELLED']);
+                $invoicesQuery->whereNotIn('status', ['PAID', 'CANCELLED'])
+                    ->whereDate('due_date', '<=', now()->toDateString());
             } else {
                 $invoicesQuery->where('status', $request->inv_status);
             }
@@ -51,9 +55,13 @@ class BillingHubController extends Controller
 
         // ── Overdue restaurants (for auto-lock panel) ────────────
         $overdueRestaurants = Restaurant::withCount([
-            'invoices as overdue_invoices_count' => fn ($q) => $q->whereNotIn('status', ['PAID', 'CANCELLED']),
+            'invoices as overdue_invoices_count' => fn ($q) => $q
+                ->whereNotIn('status', ['PAID', 'CANCELLED'])
+                ->whereDate('due_date', '<=', now()->toDateString()),
         ])
-            ->whereHas('invoices', fn ($q) => $q->whereNotIn('status', ['PAID', 'CANCELLED']))
+            ->whereHas('invoices', fn ($q) => $q
+                ->whereNotIn('status', ['PAID', 'CANCELLED'])
+                ->whereDate('due_date', '<=', now()->toDateString()))
             ->get(['id', 'name', 'status', 'billing_suspended_at']);
 
         // ── All restaurants for select boxes ────────────────────
@@ -109,7 +117,7 @@ class BillingHubController extends Controller
                 'tax_amount' => 0,
                 'total_amount' => $amount,
                 'paid_amount' => 0,
-                'status' => 'OVERDUE',
+                'status' => $this->statusForDueDate($dueDate),
                 'invoice_type' => $type,
                 'notes' => 'فاتورة شهر '.now()->translatedFormat('F Y'),
             ]);
@@ -135,6 +143,7 @@ class BillingHubController extends Controller
     {
         $overdueInvoices = Invoice::with('restaurant')
             ->whereNotIn('status', ['PAID', 'CANCELLED'])
+            ->whereDate('due_date', '<=', now()->toDateString())
             ->get();
 
         $locked = 0;
@@ -172,6 +181,8 @@ class BillingHubController extends Controller
             'collection_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
+
+        $this->assertInvoiceBelongsToRestaurant($validated['restaurant_id'], $validated['invoice_id'] ?? null);
 
         $validated['collected_by_user_id'] = auth()->id();
 
@@ -320,7 +331,7 @@ class BillingHubController extends Controller
             'tax_amount' => 0,
             'total_amount' => $validated['subtotal'],
             'paid_amount' => 0,
-            'status' => 'OVERDUE',
+            'status' => $this->statusForDueDate($validated['due_date']),
             'invoice_type' => $validated['invoice_type'],
             'notes' => $validated['notes'] ?? null,
         ]);
@@ -380,5 +391,58 @@ class BillingHubController extends Controller
         ActivityLog::log('INVOICE_UPDATED', 'Invoice', $invoice->id, null, ['number' => $invoice->invoice_number]);
 
         return back()->with('success', "✅ تم تعديل الفاتورة {$invoice->invoice_number} بنجاح.");
+    }
+
+    public function lockRestaurant(int $id): RedirectResponse
+    {
+        $restaurant = Restaurant::findOrFail($id);
+        $invoices = Invoice::query()
+            ->where('restaurant_id', $restaurant->id)
+            ->whereNotIn('status', ['PAID', 'CANCELLED'])
+            ->whereDate('due_date', '<=', now()->toDateString())
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return back()->with('error', 'لا توجد فاتورة متأخرة لهذا المطعم.');
+        }
+
+        foreach ($invoices as $invoice) {
+            $invoice->update(['status' => 'OVERDUE']);
+        }
+
+        if ($restaurant->status !== 'SUSPENDED') {
+            $restaurant->update([
+                'status' => 'SUSPENDED',
+                'billing_suspended_at' => now(),
+                'suspension_reason' => 'عدم سداد فاتورة متأخرة',
+            ]);
+        }
+
+        ActivityLog::log('RESTAURANT_SUSPENDED_FOR_BILLING', 'Restaurant', $restaurant->id);
+
+        return back()->with('warning', "تم إيقاف مطعم {$restaurant->name} بسبب تأخر السداد.");
+    }
+
+    private function statusForDueDate(string $dueDate): string
+    {
+        return $dueDate <= now()->toDateString() ? 'OVERDUE' : 'ISSUED';
+    }
+
+    private function assertInvoiceBelongsToRestaurant(int|string $restaurantId, mixed $invoiceId): void
+    {
+        if ($invoiceId === null || $invoiceId === '') {
+            return;
+        }
+
+        $belongs = Invoice::query()
+            ->whereKey($invoiceId)
+            ->where('restaurant_id', $restaurantId)
+            ->exists();
+
+        if (! $belongs) {
+            throw ValidationException::withMessages([
+                'invoice_id' => 'الفاتورة لا تتبع المطعم المحدد.',
+            ]);
+        }
     }
 }

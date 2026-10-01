@@ -86,6 +86,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                 </div>
             </div>
             <button
+                v-if="$can('finance.manage')"
                 type="button"
                 class="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-lg font-medium transition-colors"
                 @click="showForm = !showForm"
@@ -208,6 +209,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                             <td class="py-3 text-stone-400">{{ formatDate(exp.date) }}</td>
                             <td class="py-3">
                                 <button
+                                    v-if="$can('finance.manage')"
                                     type="button"
                                     class="p-1.5 text-stone-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
                                     @click="confirmDeleteId = exp.id"

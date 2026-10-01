@@ -90,6 +90,36 @@ class RestaurantActionsTest extends TestCase
         $this->assertSame('ACTIVE', $restaurant->fresh()->status);
     }
 
+    public function test_admin_can_delete_a_partner_restaurant(): void
+    {
+        $admin = $this->adminUser();
+        $restaurant = $this->restaurant();
+
+        $this->actingAs($admin)
+            ->delete("/admin/restaurants/{$restaurant->id}")
+            ->assertRedirect(route('admin.restaurants.index'))
+            ->assertSessionHas('success');
+
+        $this->assertSoftDeleted($restaurant);
+    }
+
+    public function test_deleting_a_missing_restaurant_returns_to_the_list(): void
+    {
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)
+            ->post('/admin/restaurants/99999/delete')
+            ->assertRedirect(route('admin.restaurants.index'))
+            ->assertSessionHas('error');
+    }
+
+    public function test_missing_public_restaurant_returns_to_the_list(): void
+    {
+        $this->get('/restaurants/missing-restaurant')
+            ->assertRedirect(route('restaurants'))
+            ->assertSessionHas('error');
+    }
+
     public function test_legacy_singular_restaurant_path_is_not_used_for_public_storefront(): void
     {
         $restaurant = $this->restaurant();

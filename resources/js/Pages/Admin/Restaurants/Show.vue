@@ -141,6 +141,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
             </div>
             <div class="flex items-center gap-3">
                 <Link
+                    v-if="$can('restaurants.update')"
                     :href="`/admin/restaurants/${restaurant.id}/edit`"
                     class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
                 >
@@ -148,7 +149,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                     تعديل
                 </Link>
                 <button
-                    v-if="restaurant.status === 'ACTIVE'"
+                    v-if="restaurant.status === 'ACTIVE' && $can('restaurants.update')"
                     type="button"
                     :disabled="suspending"
                     class="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg font-medium transition-colors disabled:opacity-50"
@@ -158,7 +159,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                     تعليق
                 </button>
                 <button
-                    v-else
+                    v-else-if="$can('restaurants.update')"
                     type="button"
                     class="flex items-center gap-2 px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg font-medium transition-colors"
                     @click="handleActivate"
@@ -262,12 +263,14 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                     <h3 class="text-sm font-semibold text-stone-300 mb-3">إجراءات سريعة</h3>
                     <div class="space-y-2">
                         <Link
+                            v-if="$can('restaurants.update')"
                             :href="`/admin/restaurants/${restaurant.id}/edit`"
                             class="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-stone-100 text-stone-300 text-sm transition-colors"
                         >
                             <Edit class="w-4 h-4" /> تعديل بيانات المطعم
                         </Link>
                         <Link
+                            v-if="$can('finance.view')"
                             :href="`/admin/finance/overview?restaurant=${restaurant.id}`"
                             class="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-stone-100 text-stone-300 text-sm transition-colors"
                         >

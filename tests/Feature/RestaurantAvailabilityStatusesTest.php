@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Restaurant;
+use App\Models\RestaurantStaff;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class RestaurantAvailabilityStatusesTest extends TestCase
@@ -105,7 +108,24 @@ class RestaurantAvailabilityStatusesTest extends TestCase
                 'availability_status' => 'OPEN',
             ]);
 
-        $restaurant->update(['availability_status' => 'CLOSED']);
+        Role::findOrCreate('RESTAURANT_OWNER', 'web');
+        $owner = User::factory()->create([
+            'role' => 'RESTAURANT_OWNER',
+            'is_active' => true,
+        ]);
+        $owner->assignRole('RESTAURANT_OWNER');
+        RestaurantStaff::query()->create([
+            'restaurant_id' => $restaurant->id,
+            'user_id' => $owner->id,
+            'role' => 'RESTAURANT_OWNER',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($owner)
+            ->post('/restaurant/settings/availability', [
+                'availability_status' => 'CLOSED',
+            ])
+            ->assertRedirect();
 
         $this->getJson(route('restaurants.availability'))
             ->assertOk()

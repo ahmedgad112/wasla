@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\CustomerAddress;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,12 +16,13 @@ class CustomerProfileController extends Controller
     public function index(): Response
     {
         $user = auth()->user();
-        $customer = $user->customer ?? \App\Models\Customer::firstOrCreate(
+        $customer = $user->customer ?? Customer::firstOrCreate(
             ['user_id' => $user->id],
             ['student_status' => 'PENDING']
         );
+
         return Inertia::render('Customer/Profile', [
-            'customer'  => $customer->load(['user', 'addresses']),
+            'customer' => $customer->load(['user', 'addresses']),
         ]);
     }
 
@@ -28,31 +30,32 @@ class CustomerProfileController extends Controller
     {
         $user = auth()->user();
         $validated = $request->validate([
-            'name'  => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'phone' => ['nullable', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($user->id)],
         ], [
             'phone.unique' => 'رقم الهاتف مسجل مسبقاً لدى مستخدم آخر.',
         ]);
         $user->update($validated);
+
         return back()->with('success', 'تم تحديث ملفك الشخصي.');
     }
 
     public function submitStudentVerification(Request $request): RedirectResponse
     {
         $customer = auth()->user()->customer;
-        abort_if(!$customer, 403);
+        abort_if(! $customer, 403);
 
         $request->validate([
             'university_name' => 'required|string|max:255',
-            'student_id_image'=> 'required|file|mimes:jpg,jpeg,png,pdf|max:4096',
+            'student_id_image' => 'required|file|mimes:jpg,jpeg,png,pdf|max:4096',
         ]);
 
         $path = $request->file('student_id_image')->store('student-ids', 'public');
 
         $customer->update([
-            'university_name'           => $request->university_name,
-            'university_id_card_image'  => $path,
-            'student_status'            => 'PENDING',
+            'university_name' => $request->university_name,
+            'university_id_card_image' => $path,
+            'student_status' => 'PENDING',
         ]);
 
         return back()->with('success', 'تم إرسال طلب التحقق من الهوية الطلابية. سيتم مراجعته قريباً.');
@@ -61,14 +64,14 @@ class CustomerProfileController extends Controller
     public function storeAddress(Request $request): RedirectResponse
     {
         $customer = auth()->user()->customer;
-        abort_if(!$customer, 403);
+        abort_if(! $customer, 403);
 
         $validated = $request->validate([
-            'label'     => 'required|string|max:100',
-            'address'   => 'required|string|max:500',
-            'latitude'  => 'nullable|numeric',
+            'label' => 'required|string|max:100',
+            'address' => 'required|string|max:500',
+            'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'is_default'=> 'boolean',
+            'is_default' => 'boolean',
         ]);
 
         if ($validated['is_default'] ?? false) {
@@ -76,13 +79,17 @@ class CustomerProfileController extends Controller
         }
 
         $customer->addresses()->create($validated);
+
         return back()->with('success', 'تم إضافة العنوان.');
     }
 
     public function deleteAddress(int $id): RedirectResponse
     {
         $customer = auth()->user()->customer;
+        abort_if(! $customer, 403);
+
         CustomerAddress::where('customer_id', $customer->id)->findOrFail($id)->delete();
+
         return back()->with('success', 'تم حذف العنوان.');
     }
 }

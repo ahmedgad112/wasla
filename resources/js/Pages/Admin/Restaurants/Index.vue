@@ -2,7 +2,8 @@
 import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Restaurant, PaginatedResponse } from '../../../Types';
-import { Plus, Search, Eye, Pencil, ExternalLink } from '@lucide/vue';
+import { Plus, Search, Eye, Pencil, ExternalLink, Trash2 } from '@lucide/vue';
+import ConfirmModal from '../../../Components/ConfirmModal.vue';
 import { resolveMediaUrl } from '../../../lib/media';
 
 const props = defineProps<{
@@ -12,6 +13,8 @@ const props = defineProps<{
 
 const items = computed(() => props.restaurants?.data || []);
 const search = ref(props.filters.search || '');
+const confirmDeleteId = ref<number | null>(null);
+const confirmDeleteName = ref('');
 
 const statusFilters = ['ALL', 'ACTIVE', 'INACTIVE', 'SUSPENDED'];
 
@@ -34,6 +37,25 @@ const handleFilterStatus = (status: string): void => {
 const handleToggleStatus = (id: number, currentStatus: string): void => {
     const action = currentStatus === 'ACTIVE' ? 'suspend' : 'activate';
     router.post(`/admin/restaurants/${id}/${action}`, {}, { preserveScroll: true });
+};
+
+const askDelete = (restaurant: { id: number; name: string }): void => {
+    confirmDeleteId.value = restaurant.id;
+    confirmDeleteName.value = restaurant.name;
+};
+
+const confirmDelete = (): void => {
+    if (!confirmDeleteId.value) {
+        return;
+    }
+
+    router.post(`/admin/restaurants/${confirmDeleteId.value}/delete`, {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            confirmDeleteId.value = null;
+            confirmDeleteName.value = '';
+        },
+    });
 };
 
 const isStatusActive = (st: string): boolean =>
@@ -78,6 +100,7 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                 </div>
 
                 <Link
+                    v-if="$can('restaurants.create')"
                     href="/admin/restaurants/create"
                     class="px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 shrink-0"
                 >
@@ -189,6 +212,7 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                                         <Eye class="h-4 w-4" />
                                     </Link>
                                     <Link
+                                        v-if="$can('restaurants.update')"
                                         :href="`/admin/restaurants/${r.id}/edit`"
                                         class="rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-white"
                                         title="تعديل"
@@ -205,11 +229,21 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                                         <ExternalLink class="h-4 w-4" />
                                     </a>
                                     <button
+                                        v-if="$can('restaurants.update')"
                                         type="button"
                                         class="rounded-lg border border-stone-200 px-2.5 py-1 text-[11px] font-bold transition hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800"
                                         @click="handleToggleStatus(r.id, r.status)"
                                     >
                                         {{ r.status === 'ACTIVE' ? 'إيقاف' : 'تفعيل' }}
+                                    </button>
+                                    <button
+                                        v-if="$can('restaurants.delete')"
+                                        type="button"
+                                        class="rounded-lg p-1.5 text-stone-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
+                                        title="حذف المطعم"
+                                        @click="askDelete(r)"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
                                     </button>
                                 </div>
                             </td>
@@ -219,4 +253,13 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
             </div>
         </div>
     </div>
+
+    <ConfirmModal
+        :is-open="confirmDeleteId !== null"
+        title="حذف المطعم"
+        :message="`هل تريد حذف مطعم «${confirmDeleteName}»؟ سيختفي من قائمة الشركاء ومن صفحة العملاء.`"
+        confirm-text="حذف المطعم"
+        @confirm="confirmDelete"
+        @cancel="confirmDeleteId = null"
+    />
 </template>

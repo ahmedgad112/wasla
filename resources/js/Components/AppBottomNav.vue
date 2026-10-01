@@ -4,8 +4,10 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { Home, Percent, Receipt, UserRound, ShoppingBag } from '@lucide/vue';
 import { useCartStore } from '../Stores/cartStore';
 import type { SharedInertiaProps } from '../Types';
+import { usePermission } from '../composables/usePermission';
 
 const page = usePage<SharedInertiaProps>();
+const { can } = usePermission();
 const auth = computed(() => page.props.auth);
 const currentUrl = computed(() => page.url || '/');
 const cart = useCartStore();
@@ -35,23 +37,31 @@ const accountHref = computed(() => {
 
 const ordersHref = computed(() => (!isLoggedIn.value ? '/login' : '/customer/orders'));
 
+const showOrders = computed(() => !isCustomer.value || can('customer.orders'));
+const showAccount = computed(() => !isCustomer.value || can('customer.profile'));
+const showCart = computed(() => !isLoggedIn.value || !isCustomer.value || can('customer.orders'));
+
 const tabs = computed(() => [
     { href: '/', label: 'الرئيسية', icon: Home, active: currentUrl.value === '/' },
     { href: '/offers', label: 'العروض', icon: Percent, active: currentUrl.value.startsWith('/offers') },
-    {
-        href: ordersHref.value,
-        label: 'طلباتي',
-        icon: Receipt,
-        active: currentUrl.value.startsWith('/customer/orders'),
-    },
-    {
-        href: accountHref.value,
-        label: 'حسابي',
-        icon: UserRound,
-        active:
-            currentUrl.value.startsWith('/customer/profile') ||
-            currentUrl.value.startsWith('/customer/dashboard'),
-    },
+    ...(showOrders.value
+        ? [{
+            href: ordersHref.value,
+            label: 'طلباتي',
+            icon: Receipt,
+            active: currentUrl.value.startsWith('/customer/orders'),
+        }]
+        : []),
+    ...(showAccount.value
+        ? [{
+            href: accountHref.value,
+            label: 'حسابي',
+            icon: UserRound,
+            active:
+                currentUrl.value.startsWith('/customer/profile') ||
+                currentUrl.value.startsWith('/customer/dashboard'),
+        }]
+        : []),
 ]);
 
 const leftTabs = computed(() => tabs.value.slice(0, 2));
@@ -75,7 +85,7 @@ const rightTabs = computed(() => tabs.value.slice(2));
                 <span>{{ tab.label }}</span>
             </Link>
 
-            <button type="button" class="relative -mt-6 flex flex-col items-center" aria-label="السلة" @click="cart.openCart()">
+            <button v-if="showCart" type="button" class="relative -mt-6 flex flex-col items-center" aria-label="السلة" @click="cart.openCart()">
                 <span class="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/40">
                     <ShoppingBag class="h-6 w-6" />
                 </span>

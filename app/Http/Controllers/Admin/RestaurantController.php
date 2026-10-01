@@ -153,11 +153,15 @@ class RestaurantController extends Controller
             ->with('success', "تم إنشاء المطعم \"{$restaurant->name}\" وحساب المالك بنجاح.");
     }
 
-    public function show(int $id): Response
+    public function show(int $id): Response|RedirectResponse
     {
         $restaurant = Restaurant::with(['staff.user', 'deliveryDrivers.user'])
             ->withCount(['orders', 'menuItems', 'categories'])
-            ->findOrFail($id);
+            ->find($id);
+
+        if (! $restaurant) {
+            return $this->missingRestaurantRedirect();
+        }
 
         $financialSummary = $this->financialService->getPlatformSummary();
         $restaurantFinancial = collect($this->financialService->getRestaurantFinancialTable())
@@ -169,9 +173,13 @@ class RestaurantController extends Controller
         ]);
     }
 
-    public function edit(int $id): Response
+    public function edit(int $id): Response|RedirectResponse
     {
-        $restaurant = Restaurant::findOrFail($id);
+        $restaurant = Restaurant::find($id);
+
+        if (! $restaurant) {
+            return $this->missingRestaurantRedirect();
+        }
 
         return Inertia::render('Admin/Restaurants/Edit', [
             'restaurant' => $restaurant,
@@ -242,12 +250,46 @@ class RestaurantController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        $restaurant = Restaurant::findOrFail($id);
-        ActivityLog::log('RESTAURANT_DELETED', 'Restaurant', $restaurant->id, ['name' => $restaurant->name]);
-        $restaurant->delete(); // Soft delete
+        $restaurant = Restaurant::withTrashed()->find($id);
+
+        if (! $restaurant || $restaurant->trashed()) {
+            return $this->missingRestaurantRedirect();
+        }
+
+        $staffUserIds = RestaurantStaff::query()
+            ->where('restaurant_id', $restaurant->id)
+            ->pluck('user_id');
+
+        DB::transaction(function () use ($restaurant, $staffUserIds): void {
+            ActivityLog::log('RESTAURANT_DELETED', 'Restaurant', $restaurant->id, ['name' => $restaurant->name]);
+
+            $restaurant->update([
+                'status' => 'INACTIVE',
+                'availability_status' => 'CLOSED',
+            ]);
+            $restaurant->delete();
+
+            User::query()
+                ->whereIn('id', $staffUserIds)
+                ->whereIn('role', ['RESTAURANT_OWNER', 'RESTAURANT_STAFF'])
+                ->whereDoesntHave('restaurantStaff', function ($query) use ($restaurant) {
+                    $query->where('restaurant_id', '!=', $restaurant->id);
+                })
+                ->update(['is_active' => false]);
+        });
+
+        PublicCatalogCache::forgetRestaurant($restaurant->slug);
+        PublicCatalogCache::forgetListing();
 
         return redirect()->route('admin.restaurants.index')
             ->with('success', 'تم حذف المطعم بنجاح.');
+    }
+
+    private function missingRestaurantRedirect(): RedirectResponse
+    {
+        return redirect()
+            ->route('admin.restaurants.index')
+            ->with('error', 'هذا المطعم غير موجود أو تم حذفه من قبل.');
     }
 
     public function suspend(int $id): RedirectResponse

@@ -6,6 +6,7 @@ export interface CartItem {
     menuItem: MenuItem;
     quantity: number;
     selectedOptions: {
+        id?: number;
         optionName: string;
         valueName: string;
         price: number;
@@ -82,7 +83,7 @@ export const useCartStore = defineStore('cart', {
             item: MenuItem,
             restaurant: Restaurant,
             quantity = 1,
-            selectedOptions: { optionName: string; valueName: string; price: number }[] = [],
+            selectedOptions: { id?: number; optionName: string; valueName: string; price: number }[] = [],
             selectedAddons: MenuItemAddon[] = [],
             notes = '',
         ): boolean {

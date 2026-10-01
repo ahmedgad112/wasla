@@ -21,6 +21,17 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->dropSoftDeletes();
+        });
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropUnique(['phone']);
+        });
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropIndex(['role']);
+        });
+
+        Schema::table('users', function (Blueprint $table) {
             $table->dropColumn(['phone', 'role', 'is_active', 'avatar']);
         });
     }

@@ -122,7 +122,7 @@ const formatAmount = (amount: number | string): string => Number(amount).toLocal
                     </p>
                 </div>
 
-                <div class="flex items-center gap-2 flex-wrap">
+                <div v-if="$can('billing.manage')" class="flex items-center gap-2 flex-wrap">
                     <button
                         type="button"
                         class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5"
@@ -267,7 +267,7 @@ const formatAmount = (amount: number | string): string => Number(amount).toLocal
                             </td>
                             <td class="py-4 px-4 text-center">
                                 <div class="flex items-center justify-center gap-1.5 flex-wrap">
-                                    <template v-if="inv.status !== 'PAID' && inv.status !== 'CANCELLED'">
+                                    <template v-if="inv.status !== 'PAID' && inv.status !== 'CANCELLED' && $can('billing.manage')">
                                         <button
                                             type="button"
                                             class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-xs flex items-center gap-1 transition"

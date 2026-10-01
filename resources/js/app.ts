@@ -8,6 +8,8 @@ import { createPinia } from 'pinia';
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import AdminLayout from './Layouts/AdminLayout.vue';
 import RestaurantLayout from './Layouts/RestaurantLayout.vue';
+import { userCan } from './composables/usePermission';
+import type { SharedProps } from './Types';
 
 const appName = document.head.querySelector('meta[name="app-name"]')?.getAttribute('content') ?? 'وصلة';
 const pages = import.meta.glob('./Pages/**/*.vue');
@@ -30,10 +32,17 @@ createInertiaApp({
         const pinia = createPinia();
         pinia.use(piniaPluginPersistedstate);
 
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .use(pinia)
-            .mount(el);
+        const vueApp = createApp({ render: () => h(App, props) });
+        vueApp.use(plugin);
+        vueApp.config.globalProperties.$can = function (
+            this: { $page?: { props?: SharedProps } },
+            permission: string,
+        ): boolean {
+            const auth = this.$page?.props?.auth;
+
+            return userCan(auth?.user?.role, auth?.permissions, permission);
+        };
+        vueApp.use(pinia).mount(el);
     },
     progress: {
         color: '#f97316',

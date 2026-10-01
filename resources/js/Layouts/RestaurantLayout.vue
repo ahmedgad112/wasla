@@ -21,6 +21,7 @@ import {
 import type { AvailabilityStatus, SharedInertiaProps } from '../Types';
 import { useThemeMode } from '../composables/useThemeMode';
 import { availabilityMeta, resolveAvailability } from '../lib/restaurantAvailability';
+import { usePermission } from '../composables/usePermission';
 
 const props = defineProps<{
     title?: string;
@@ -33,22 +34,25 @@ const auth = computed(() => page.props.auth);
 const flash = computed(() => page.props.flash);
 const shellRestaurant = computed(() => page.props.shell_restaurant);
 const { darkMode, toggleDarkMode } = useThemeMode();
+const { can } = usePermission();
 const sidebarOpen = ref(false);
 const updating = ref(false);
 const currentPath = computed(() => page.url.split('?')[0]);
 
 const navItems = [
-    { label: 'الرئيسية', href: '/restaurant/dashboard', icon: LayoutDashboard },
-    { label: 'الطلبات', href: '/restaurant/orders', icon: ShoppingBag },
-    { label: 'المنيو', href: '/restaurant/menu', icon: UtensilsCrossed },
-    { label: 'التصنيفات', href: '/restaurant/categories', icon: Layers },
-    { label: 'العروض', href: '/restaurant/offers', icon: Tag },
-    { label: 'الكباتن', href: '/restaurant/delivery-drivers', icon: Bike },
-    { label: 'نشاط التوصيل', href: '/restaurant/driver-stats', icon: Activity },
-    { label: 'الفواتير', href: '/restaurant/billing', icon: Receipt },
-    { label: 'التقارير', href: '/restaurant/analytics', icon: BarChart3 },
-    { label: 'الإعدادات', href: '/restaurant/settings', icon: Settings },
+    { label: 'الرئيسية', href: '/restaurant/dashboard', icon: LayoutDashboard, permission: 'restaurant.dashboard' },
+    { label: 'الطلبات', href: '/restaurant/orders', icon: ShoppingBag, permission: 'restaurant.orders' },
+    { label: 'المنيو', href: '/restaurant/menu', icon: UtensilsCrossed, permission: 'restaurant.menu' },
+    { label: 'التصنيفات', href: '/restaurant/categories', icon: Layers, permission: 'restaurant.menu' },
+    { label: 'العروض', href: '/restaurant/offers', icon: Tag, permission: 'restaurant.offers' },
+    { label: 'الكباتن', href: '/restaurant/delivery-drivers', icon: Bike, permission: 'restaurant.drivers' },
+    { label: 'نشاط التوصيل', href: '/restaurant/driver-stats', icon: Activity, permission: 'restaurant.drivers' },
+    { label: 'الفواتير', href: '/restaurant/billing', icon: Receipt, permission: 'restaurant.billing' },
+    { label: 'التقارير', href: '/restaurant/analytics', icon: BarChart3, permission: 'restaurant.analytics' },
+    { label: 'الإعدادات', href: '/restaurant/settings', icon: Settings, permission: 'restaurant.settings' },
 ];
+
+const visibleNavItems = computed(() => navItems.filter((item) => can(item.permission)));
 
 const availabilityOptions: { value: AvailabilityStatus; label: string; activeClass: string }[] = [
     { value: 'OPEN', label: 'مفتوح', activeClass: 'bg-emerald-500 text-white shadow-sm' },
@@ -126,7 +130,7 @@ const closeSidebar = (): void => {
                 <div class="admin-nav-group">
                     <p>القائمة</p>
                     <Link
-                        v-for="item in navItems"
+                        v-for="item in visibleNavItems"
                         :key="item.href"
                         :href="item.href"
                         prefetch
@@ -170,7 +174,7 @@ const closeSidebar = (): void => {
                 </div>
                 <nav class="admin-nav">
                     <Link
-                        v-for="item in navItems"
+                        v-for="item in visibleNavItems"
                         :key="item.href"
                         :href="item.href"
                         prefetch
@@ -205,6 +209,7 @@ const closeSidebar = (): void => {
 
                 <div class="flex items-center gap-2">
                     <div
+                        v-if="can('restaurant.settings')"
                         :class="[
                             'inline-flex rounded-full bg-stone-100 p-1 ring-1 ring-stone-200 dark:bg-stone-800 dark:ring-stone-700',
                             !accountActive || updating ? 'opacity-60' : '',

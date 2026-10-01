@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\FinanceController as AdminFinance;
 use App\Http\Controllers\Admin\InvoiceController as AdminInvoice;
 use App\Http\Controllers\Admin\OrderController as AdminOrder;
 use App\Http\Controllers\Admin\RestaurantController as AdminRestaurant;
+use App\Http\Controllers\Admin\RoleController as AdminRole;
 use App\Http\Controllers\Admin\SettingsController as AdminSettings;
 use App\Http\Controllers\Admin\UserController as AdminUser;
 use App\Http\Controllers\Auth\AuthController;
@@ -82,7 +83,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // =====================================================
 // CUSTOMER ROUTES — Authenticated customers only
 // =====================================================
-Route::middleware(['auth', 'portal:CUSTOMER'])->group(function () {
+Route::middleware(['auth', 'portal:CUSTOMER', 'route.permission'])->group(function () {
     // Dashboard (both /customer/dashboard and /dashboard)
     Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->name('customer.dashboard');
     Route::get('/customer/dashboard', [CustomerDashboardController::class, 'index'])->name('customer.dashboard.alias');
@@ -126,13 +127,14 @@ Route::middleware(['auth', 'portal:CUSTOMER'])->group(function () {
 // =====================================================
 // ADMIN ROUTES — SUPER_ADMIN, ADMIN, PLATFORM_STAFF
 // =====================================================
-Route::middleware(['auth', 'portal:ADMIN'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'portal:ADMIN', 'route.permission'])->prefix('admin')->name('admin.')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [AdminDashboard::class, 'index'])->name('dashboard');
 
     // Restaurants
     Route::resource('restaurants', AdminRestaurant::class);
+    Route::post('/restaurants/{id}/delete', [AdminRestaurant::class, 'destroy'])->name('restaurants.delete');
     Route::post('/restaurants/{id}/suspend', [AdminRestaurant::class, 'suspend'])->name('restaurants.suspend');
     Route::post('/restaurants/{id}/activate', [AdminRestaurant::class, 'activate'])->name('restaurants.activate');
     Route::put('/restaurants/{id}/financial-config', [AdminRestaurant::class, 'updateFinancialConfig'])->name('restaurants.financial-config');
@@ -148,7 +150,7 @@ Route::middleware(['auth', 'portal:ADMIN'])->prefix('admin')->name('admin.')->gr
     Route::match(['post', 'patch'], '/customers/{id}/reject-student', [AdminCustomer::class, 'rejectStudent'])->name('customers.reject-student');
 
     // Users (admin user management)
-    Route::resource('users', AdminUser::class);
+    Route::resource('users', AdminUser::class)->except(['show']);
     Route::post('/users/{id}/toggle-active', [AdminUser::class, 'toggleActive'])->name('users.toggle-active');
 
     // Finance
@@ -163,7 +165,7 @@ Route::middleware(['auth', 'portal:ADMIN'])->prefix('admin')->name('admin.')->gr
 
     // Invoices
     Route::post('/invoices/auto-generate', [AdminInvoice::class, 'autoGenerateMonthly'])->name('invoices.auto-generate');
-    Route::resource('invoices', AdminInvoice::class);
+    Route::resource('invoices', AdminInvoice::class)->except(['edit', 'update']);
     Route::match(['post', 'patch'], '/invoices/{id}/issue', [AdminInvoice::class, 'issue'])->name('invoices.issue');
     Route::match(['post', 'patch'], '/invoices/{id}/mark-paid', [AdminInvoice::class, 'markPaid'])->name('invoices.mark-paid');
     Route::match(['post', 'patch'], '/invoices/{id}/suspend-restaurant', [AdminInvoice::class, 'suspendRestaurant'])->name('invoices.suspend-restaurant');
@@ -185,6 +187,7 @@ Route::middleware(['auth', 'portal:ADMIN'])->prefix('admin')->name('admin.')->gr
     Route::post('/billing/invoice/{id}/mark-paid', [AdminBillingHub::class, 'markInvoicePaid'])->name('billing.invoice.mark-paid');
     Route::post('/billing/invoice/{id}/suspend', [AdminBillingHub::class, 'suspendRestaurant'])->name('billing.invoice.suspend');
     Route::post('/billing/invoice/{id}/cancel', [AdminBillingHub::class, 'cancelInvoice'])->name('billing.invoice.cancel');
+    Route::post('/billing/restaurant/{id}/suspend', [AdminBillingHub::class, 'lockRestaurant'])->name('billing.restaurant.suspend');
 
     // Analytics
     Route::get('/analytics', [AdminAnalytics::class, 'index'])->name('analytics');
@@ -211,12 +214,15 @@ Route::middleware(['auth', 'portal:ADMIN'])->prefix('admin')->name('admin.')->gr
     Route::post('/delivery-drivers', [AdminDriver::class, 'store'])->name('delivery-drivers.store');
     Route::delete('/delivery-drivers/{id}', [AdminDriver::class, 'destroy'])->name('delivery-drivers.destroy');
     Route::post('/delivery-drivers/{id}/toggle', [AdminDriver::class, 'toggle'])->name('delivery-drivers.toggle');
+
+    Route::get('/roles', [AdminRole::class, 'index'])->name('roles.index');
+    Route::put('/roles/{role}', [AdminRole::class, 'update'])->name('roles.update');
 });
 
 // =====================================================
 // RESTAURANT ROUTES — RESTAURANT_OWNER, RESTAURANT_STAFF
 // =====================================================
-Route::middleware(['auth', 'portal:RESTAURANT', 'billing.check'])->prefix('restaurant')->name('restaurant.')->group(function () {
+Route::middleware(['auth', 'portal:RESTAURANT', 'billing.check', 'route.permission'])->prefix('restaurant')->name('restaurant.')->group(function () {
 
     Route::get('/dashboard', [RestaurantDashboard::class, 'index'])->name('dashboard');
 
@@ -230,19 +236,19 @@ Route::middleware(['auth', 'portal:RESTAURANT', 'billing.check'])->prefix('resta
     Route::post('/orders/{id}/assign-driver', [RestaurantOrder::class, 'assignDriver'])->name('orders.assign-driver');
 
     // Categories
-    Route::resource('categories', RestaurantCategory::class);
+    Route::resource('categories', RestaurantCategory::class)->except(['create', 'show', 'edit']);
     Route::post('/categories/reorder', [RestaurantCategory::class, 'reorder'])->name('categories.reorder');
 
     // Menu Items
-    Route::resource('menu', RestaurantMenuItem::class);
+    Route::resource('menu', RestaurantMenuItem::class)->except(['show']);
     Route::post('/menu/{id}/toggle-availability', [RestaurantMenuItem::class, 'toggleAvailability'])->name('menu.toggle');
 
     // Offers
-    Route::resource('offers', RestaurantOffer::class);
+    Route::resource('offers', RestaurantOffer::class)->except(['show']);
     Route::post('/offers/{id}/toggle', [RestaurantOffer::class, 'toggle'])->name('offers.toggle');
 
     // Delivery Drivers
-    Route::resource('delivery-drivers', RestaurantDriver::class);
+    Route::resource('delivery-drivers', RestaurantDriver::class)->except(['show']);
     Route::post('/delivery-drivers/{id}/toggle', [RestaurantDriver::class, 'toggle'])->name('drivers.toggle');
 
     // Analytics
@@ -260,7 +266,7 @@ Route::middleware(['auth', 'portal:RESTAURANT', 'billing.check'])->prefix('resta
 // =====================================================
 // DELIVERY DRIVER ROUTES — DELIVERY_DRIVER only
 // =====================================================
-Route::middleware(['auth', 'portal:DELIVERY', 'billing.check'])->prefix('delivery')->name('delivery.')->group(function () {
+Route::middleware(['auth', 'portal:DELIVERY', 'billing.check', 'route.permission'])->prefix('delivery')->name('delivery.')->group(function () {
 
     Route::get('/dashboard', [DeliveryDashboard::class, 'index'])->name('dashboard');
     Route::get('/suspended', [DeliveryDashboard::class, 'suspended'])->name('suspended');

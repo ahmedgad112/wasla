@@ -163,7 +163,7 @@ const isStatusActive = (key: string): boolean =>
                                 </button>
 
                                 <button
-                                    v-if="c.student_status !== 'APPROVED'"
+                                    v-if="c.student_status !== 'APPROVED' && $can('customers.manage')"
                                     type="button"
                                     class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]"
                                     @click="handleVerify(c.id)"
@@ -172,7 +172,7 @@ const isStatusActive = (key: string): boolean =>
                                 </button>
 
                                 <button
-                                    v-if="c.student_status === 'PENDING'"
+                                    v-if="c.student_status === 'PENDING' && $can('customers.manage')"
                                     type="button"
                                     class="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-[11px]"
                                     @click="handleReject(c.id)"

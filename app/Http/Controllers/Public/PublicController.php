@@ -12,6 +12,7 @@ use App\Models\Restaurant;
 use App\Services\LandingCmsService;
 use App\Services\PublicCatalogCache;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,7 +34,8 @@ class PublicController extends Controller
                 })
                 ->latest()
                 ->take(12)
-                ->get();
+                ->get()
+                ->toArray();
         });
 
         $restaurants = Cache::remember(PublicCatalogCache::FEATURED_RESTAURANTS, 60, function () {
@@ -50,7 +52,8 @@ class PublicController extends Controller
                 ->withCount(['offers' => fn ($q) => $q->where('is_active', true)])
                 ->orderByRaw("CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END")
                 ->latest()
-                ->get();
+                ->get()
+                ->toArray();
         });
 
         $stats = Cache::remember(PublicCatalogCache::STATS, 120, function () {
@@ -211,7 +214,8 @@ class PublicController extends Controller
             return Restaurant::query()
                 ->whereIn('status', ['ACTIVE', 'SUSPENDED'])
                 ->orderBy('id')
-                ->get(['id', 'status', 'availability_status']);
+                ->get(['id', 'status', 'availability_status'])
+                ->toArray();
         });
 
         return response()
@@ -219,10 +223,13 @@ class PublicController extends Controller
             ->header('Cache-Control', 'public, max-age=5');
     }
 
-    public function restaurantDetails(string $slug): Response
+    public function restaurantDetails(string $slug): Response|RedirectResponse
     {
-        $restaurant = Cache::remember(PublicCatalogCache::restaurantKey($slug), 30, function () use ($slug) {
-            return Restaurant::where('slug', $slug)
+        $cacheKey = PublicCatalogCache::restaurantKey($slug);
+        $restaurant = Cache::get($cacheKey);
+
+        if (! is_array($restaurant)) {
+            $model = Restaurant::where('slug', $slug)
                 ->whereIn('status', ['ACTIVE', 'SUSPENDED'])
                 ->with([
                     'categories' => function ($q) {
@@ -251,9 +258,17 @@ class PublicController extends Controller
                             });
                     },
                 ])
-                ->firstOrFail()
-                ->toArray();
-        });
+                ->first();
+
+            if (! $model) {
+                return redirect()
+                    ->route('restaurants')
+                    ->with('error', 'هذا المطعم غير متاح أو تم حذفه.');
+            }
+
+            $restaurant = $model->toArray();
+            Cache::put($cacheKey, $restaurant, 30);
+        }
 
         return Inertia::render('Public/RestaurantDetails', [
             'restaurant' => $restaurant,

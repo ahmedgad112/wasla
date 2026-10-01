@@ -116,6 +116,8 @@ class MenuItemController extends Controller
             'image' => 'nullable|image|max:10240',
         ]);
 
+        Category::where('restaurant_id', $restaurant->id)->findOrFail($validated['category_id']);
+
         $updateData = [
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],

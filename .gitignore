@@ -1,4 +1,5 @@
 *.log
+/gad
 .DS_Store
 .env
 .env.backup

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { Bike, User, LogOut, Moon, Sun, Navigation, History } from '@lucide/vue';
 import type { SharedInertiaProps } from '../Types';
+import { usePermission } from '../composables/usePermission';
 
 const props = withDefaults(
     defineProps<{
@@ -15,6 +16,7 @@ const props = withDefaults(
 );
 
 const page = usePage<SharedInertiaProps>();
+const { can } = usePermission();
 const auth = computed(() => page.props.auth);
 const flash = computed(() => page.props.flash);
 const darkMode = ref(false);
@@ -81,6 +83,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
 
                 <nav class="hidden sm:flex items-center gap-1 bg-stone-800/80 p-1 rounded-2xl border border-stone-700/60">
                     <Link
+                        v-if="can('delivery.orders')"
                         href="/delivery/dashboard"
                         prefetch
                         :class="[
@@ -92,6 +95,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
                         <span>الرئيسية</span>
                     </Link>
                     <Link
+                        v-if="can('delivery.orders')"
                         href="/delivery/active-order"
                         prefetch
                         :class="[
@@ -103,6 +107,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
                         <span>الطلب النشط</span>
                     </Link>
                     <Link
+                        v-if="can('delivery.orders')"
                         href="/delivery/order-history"
                         prefetch
                         :class="[
@@ -114,6 +119,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
                         <span>سجل الطلبات</span>
                     </Link>
                     <Link
+                        v-if="can('delivery.profile')"
                         href="/delivery/profile"
                         prefetch
                         :class="[
@@ -162,6 +168,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
 
         <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-t border-stone-200 dark:border-stone-800 py-2 px-4 flex items-center justify-around shadow-lg sm:hidden">
             <Link
+                v-if="can('delivery.orders')"
                 href="/delivery/dashboard"
                 prefetch
                 :class="[
@@ -173,6 +180,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
                 <span>الرئيسية</span>
             </Link>
             <Link
+                v-if="can('delivery.orders')"
                 href="/delivery/active-order"
                 prefetch
                 :class="[
@@ -184,6 +192,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
                 <span>الطلب النشط</span>
             </Link>
             <Link
+                v-if="can('delivery.orders')"
                 href="/delivery/order-history"
                 prefetch
                 :class="[
@@ -195,6 +204,7 @@ const isActive = (path: string): boolean => currentPath.value === path;
                 <span>السجل</span>
             </Link>
             <Link
+                v-if="can('delivery.profile')"
                 href="/delivery/profile"
                 prefetch
                 :class="[

@@ -224,7 +224,7 @@ const doCancel = (id: number, num: string): void =>
     }, true);
 
 const lockRestaurant = (r: Restaurant): void =>
-    ask(`هل تريد قفل مطعم "${r.name}"؟`, () => router.post('/admin/billing/auto-lock-overdue'), true);
+    ask(`هل تريد قفل مطعم "${r.name}"؟`, () => router.post(`/admin/billing/restaurant/${r.id}/suspend`), true);
 
 const submitCollection = (): void => {
     collectionForm.post('/admin/billing/collection', {
@@ -283,7 +283,7 @@ const goCollectionPage = (page: number): void => {
                 <p class="text-stone-400 text-sm mt-1">إدارة الفواتير والتحصيل وقفل الحسابات — كل شيء في مكان واحد</p>
             </div>
 
-            <div class="flex items-center gap-2 flex-wrap">
+            <div v-if="$can('billing.manage')" class="flex items-center gap-2 flex-wrap">
                 <button
                     type="button"
                     class="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-amber-500/20"
@@ -365,6 +365,7 @@ const goCollectionPage = (page: number): void => {
                             </div>
                         </div>
                         <button
+                            v-if="$can('billing.manage')"
                             type="button"
                             class="shrink-0 px-3 py-1.5 rounded-lg text-white text-xs font-bold transition bg-amber-500 hover:bg-amber-400"
                             @click="doAutoGenerate"
@@ -381,6 +382,7 @@ const goCollectionPage = (page: number): void => {
                             </div>
                         </div>
                         <button
+                            v-if="$can('billing.manage')"
                             type="button"
                             class="shrink-0 px-3 py-1.5 rounded-lg text-white text-xs font-bold transition bg-red-600 hover:bg-red-500"
                             @click="doAutoLock"
@@ -398,6 +400,7 @@ const goCollectionPage = (page: number): void => {
                         تسجيل تحصيل سريع
                     </h2>
                     <button
+                        v-if="$can('billing.manage')"
                         type="button"
                         class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition"
                         @click="showCollectionForm = !showCollectionForm"
@@ -500,6 +503,7 @@ const goCollectionPage = (page: number): void => {
                     </span>
                 </div>
                 <button
+                    v-if="$can('billing.manage')"
                     type="button"
                     class="mt-4 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-bold transition"
                     @click="doAutoLock"
@@ -530,6 +534,7 @@ const goCollectionPage = (page: number): void => {
                     </button>
                 </div>
                 <button
+                    v-if="$can('billing.manage')"
                     type="button"
                     class="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition"
                     @click="showInvoiceForm = !showInvoiceForm"
@@ -652,7 +657,7 @@ const goCollectionPage = (page: number): void => {
                                     <template v-if="inv.status !== 'PAID' && inv.status !== 'CANCELLED'"> ⚠️</template>
                                 </td>
                                 <td class="px-5 py-3">
-                                    <div class="flex items-center gap-1.5">
+                                    <div v-if="$can('billing.manage')" class="flex items-center gap-1.5">
                                         <button
                                             v-if="inv.status !== 'PAID'"
                                             type="button"
@@ -729,6 +734,7 @@ const goCollectionPage = (page: number): void => {
             <div class="flex justify-between items-center">
                 <h2 class="text-stone-900 font-bold text-lg">سجل التحصيلات</h2>
                 <button
+                    v-if="$can('billing.manage')"
                     type="button"
                     class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition"
                     @click="showCollectionForm = !showCollectionForm"

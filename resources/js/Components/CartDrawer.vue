@@ -175,6 +175,7 @@ const onImageError = (event: Event): void => {
                     <span class="text-orange-600">{{ total.toFixed(0) }} ج.م</span>
                 </div>
                 <button
+                    v-if="!$page.props.auth.user || $page.props.auth.user.role !== 'CUSTOMER' || $can('customer.orders')"
                     type="button"
                     class="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-500/25"
                     @click="handleCheckoutRedirect"

@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Middleware\CheckBillingStatus;
+use App\Http\Middleware\EnsurePortalRole;
+use App\Http\Middleware\EnsureRoutePermission;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,13 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Inertia middleware — shares auth/flash data with every React page
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
+            HandleInertiaRequests::class,
         ]);
 
         // Portal role enforcement — usage: ->middleware('portal:ADMIN')
         $middleware->alias([
-            'portal' => \App\Http\Middleware\EnsurePortalRole::class,
-            'billing.check' => \App\Http\Middleware\CheckBillingStatus::class,
+            'portal' => EnsurePortalRole::class,
+            'billing.check' => CheckBillingStatus::class,
+            'route.permission' => EnsureRoutePermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

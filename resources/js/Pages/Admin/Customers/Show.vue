@@ -129,7 +129,7 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
                 </div>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div v-if="$can('customers.manage')" class="flex items-center gap-2">
                 <button
                     v-if="customer.student_status !== 'APPROVED'"
                     type="button"

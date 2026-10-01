@@ -13,6 +13,7 @@ import {
     Activity,
     Database,
     Settings,
+    Shield,
     Moon,
     Sun,
     LogOut,
@@ -24,6 +25,7 @@ import {
 } from '@lucide/vue';
 import type { SharedInertiaProps } from '../Types';
 import { useThemeMode } from '../composables/useThemeMode';
+import { usePermission } from '../composables/usePermission';
 
 const props = defineProps<{
     title?: string;
@@ -33,39 +35,60 @@ const page = usePage<SharedInertiaProps>();
 const auth = computed(() => page.props.auth);
 const flash = computed(() => page.props.flash);
 const { darkMode, toggleDarkMode } = useThemeMode();
+const { can } = usePermission();
 const sidebarOpen = ref(false);
 const currentPath = computed(() => page.url.split('?')[0]);
+
+const roleLabels: Record<string, string> = {
+    SUPER_ADMIN: 'مدير عام',
+    ADMIN: 'مدير',
+    PLATFORM_STAFF: 'موظف منصة',
+    RESTAURANT_OWNER: 'مالك مطعم',
+    RESTAURANT_STAFF: 'موظف مطعم',
+    DELIVERY_DRIVER: 'كابتن توصيل',
+    CUSTOMER: 'عميل',
+};
+
+const roleLabel = computed(() => roleLabels[auth.value.user?.role ?? ''] ?? 'مدير المنصة');
 
 const navGroups = [
     {
         label: 'التشغيل',
         items: [
-            { label: 'غرفة التحكم', href: '/admin/dashboard', icon: LayoutDashboard },
-            { label: 'المطاعم الشريكة', href: '/admin/restaurants', icon: Store },
-            { label: 'طلبات المنصة', href: '/admin/orders', icon: ShoppingBag },
-            { label: 'العملاء والطلاب', href: '/admin/customers', icon: GraduationCap },
-            { label: 'المستخدمون', href: '/admin/users', icon: Users },
-            { label: 'كباتن التوصيل', href: '/admin/delivery-drivers', icon: Bike },
+            { label: 'غرفة التحكم', href: '/admin/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+            { label: 'المطاعم الشريكة', href: '/admin/restaurants', icon: Store, permission: 'restaurants.view' },
+            { label: 'طلبات المنصة', href: '/admin/orders', icon: ShoppingBag, permission: 'orders.view' },
+            { label: 'العملاء والطلاب', href: '/admin/customers', icon: GraduationCap, permission: 'customers.view' },
+            { label: 'المستخدمون', href: '/admin/users', icon: Users, permission: 'users.view' },
+            { label: 'كباتن التوصيل', href: '/admin/delivery-drivers', icon: Bike, permission: 'drivers.view' },
         ],
     },
     {
         label: 'المال',
         items: [
-            { label: 'الأرباح والتدفقات', href: '/admin/finance', icon: DollarSign },
-            { label: 'مركز التحصيل', href: '/admin/billing', icon: Receipt },
-            { label: 'المؤشرات', href: '/admin/analytics', icon: BarChart3 },
+            { label: 'الأرباح والتدفقات', href: '/admin/finance', icon: DollarSign, permission: 'finance.view' },
+            { label: 'مركز التحصيل', href: '/admin/billing', icon: Receipt, permission: 'billing.view' },
+            { label: 'المؤشرات', href: '/admin/analytics', icon: BarChart3, permission: 'analytics.view' },
         ],
     },
     {
         label: 'النظام',
         items: [
-            { label: 'المحتوى', href: '/admin/cms', icon: Layers },
-            { label: 'سجل النشاط', href: '/admin/activity-logs', icon: Activity },
-            { label: 'النسخ الاحتياطي', href: '/admin/backups', icon: Database },
-            { label: 'الإعدادات', href: '/admin/settings', icon: Settings },
+            { label: 'المحتوى', href: '/admin/cms', icon: Layers, permission: 'cms.manage' },
+            { label: 'سجل النشاط', href: '/admin/activity-logs', icon: Activity, permission: 'activity.view' },
+            { label: 'النسخ الاحتياطي', href: '/admin/backups', icon: Database, permission: 'backups.manage' },
+            { label: 'الأدوار والصلاحيات', href: '/admin/roles', icon: Shield, permission: 'roles.manage' },
+            { label: 'الإعدادات', href: '/admin/settings', icon: Settings, permission: 'settings.manage' },
         ],
     },
 ];
+
+const visibleNavGroups = computed(() => navGroups
+    .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => can(item.permission)),
+    }))
+    .filter((group) => group.items.length > 0));
 
 function isActivePath(path: string, href: string): boolean {
     if (href === '/admin/dashboard') {
@@ -99,7 +122,7 @@ const closeSidebar = (): void => {
             </Link>
 
             <nav class="admin-nav custom-scrollbar">
-                <div v-for="group in navGroups" :key="group.label" class="admin-nav-group">
+                <div v-for="group in visibleNavGroups" :key="group.label" class="admin-nav-group">
                     <p>{{ group.label }}</p>
                     <Link
                         v-for="item in group.items"
@@ -118,7 +141,7 @@ const closeSidebar = (): void => {
                 <div class="admin-avatar">{{ auth.user?.name?.charAt(0) || 'أ' }}</div>
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-bold text-stone-900 dark:text-stone-100">{{ auth.user?.name || 'المدير' }}</p>
-                    <p class="truncate text-[11px] text-stone-400">مدير المنصة</p>
+                    <p class="truncate text-[11px] text-stone-400">{{ roleLabel }}</p>
                 </div>
                 <Link href="/logout" method="post" as="button" class="admin-icon-btn" title="تسجيل الخروج">
                     <LogOut class="h-4 w-4" />
@@ -149,7 +172,7 @@ const closeSidebar = (): void => {
                     </button>
                 </div>
                 <nav class="admin-nav custom-scrollbar">
-                    <div v-for="group in navGroups" :key="group.label" class="admin-nav-group">
+                    <div v-for="group in visibleNavGroups" :key="group.label" class="admin-nav-group">
                         <p>{{ group.label }}</p>
                         <Link
                             v-for="item in group.items"
@@ -168,7 +191,7 @@ const closeSidebar = (): void => {
                     <div class="admin-avatar">{{ auth.user?.name?.charAt(0) || 'أ' }}</div>
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-bold text-stone-900 dark:text-stone-100">{{ auth.user?.name || 'المدير' }}</p>
-                        <p class="truncate text-[11px] text-stone-400">مدير المنصة</p>
+                        <p class="truncate text-[11px] text-stone-400">{{ roleLabel }}</p>
                     </div>
                     <Link href="/logout" method="post" as="button" class="admin-icon-btn" title="تسجيل الخروج">
                         <LogOut class="h-4 w-4" />

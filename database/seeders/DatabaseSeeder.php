@@ -20,9 +20,9 @@ use App\Models\Restaurant;
 use App\Models\RestaurantStaff;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Support\PermissionCatalog;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
@@ -44,29 +44,7 @@ class DatabaseSeeder extends Seeder
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
 
-        $permissions = [
-            'restaurants.view', 'restaurants.create', 'restaurants.update', 'restaurants.delete',
-            'orders.view', 'orders.manage',
-            'finance.view', 'finance.manage',
-            'offers.view', 'offers.manage',
-            'users.view', 'users.manage',
-            'settings.manage',
-        ];
-
-        foreach ($permissions as $perm) {
-            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
-        }
-
-        $superAdminRole = Role::findByName('SUPER_ADMIN');
-        $superAdminRole->syncPermissions(Permission::all());
-
-        $adminRole = Role::findByName('ADMIN');
-        $adminRole->syncPermissions([
-            'restaurants.view', 'restaurants.create', 'restaurants.update',
-            'orders.view', 'orders.manage',
-            'finance.view', 'offers.view', 'offers.manage',
-            'users.view',
-        ]);
+        PermissionCatalog::syncDefaults();
 
         // 2. System Settings & CMS
         $settings = [
