@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class Restaurant extends Model
 {
@@ -45,6 +46,9 @@ class Restaurant extends Model
         'commission_percentage',
         'monthly_subscription_fee',
         'billing_cycle',
+        'grace_period_days',
+        'subscription_starts_at',
+        'subscription_ends_at',
         'payment_due_date',
         'billing_suspended_at',
         'suspension_reason',
@@ -63,6 +67,9 @@ class Restaurant extends Model
             'student_discount_percentage' => 'decimal:2',
             'commission_percentage' => 'decimal:2',
             'monthly_subscription_fee' => 'decimal:2',
+            'grace_period_days' => 'integer',
+            'subscription_starts_at' => 'date',
+            'subscription_ends_at' => 'date',
             'payment_due_date' => 'date',
             'billing_suspended_at' => 'datetime',
         ];
@@ -160,6 +167,56 @@ class Restaurant extends Model
     public function isBillingSuspended(): bool
     {
         return $this->status === 'SUSPENDED' && $this->billing_suspended_at !== null;
+    }
+
+    public function subscriptionInvoiceAlreadyCoversToday(): bool
+    {
+        if ($this->subscription_ends_at === null) {
+            return false;
+        }
+
+        $allowanceEnds = $this->payment_due_date ?? $this->subscription_ends_at;
+
+        return $allowanceEnds->copy()->endOfDay()->greaterThanOrEqualTo(now());
+    }
+
+    /**
+     * Access ends the day after the due date, so the due date itself stays usable.
+     * A paid subscription with no open invoice still expires after its end date plus grace days.
+     */
+    public function billingAccessExpired(): bool
+    {
+        if (! $this->dateHasPassed($this->payment_due_date)) {
+            return false;
+        }
+
+        $hasUnpaidInvoice = $this->invoices()
+            ->whereNotIn('status', ['PAID', 'CANCELLED'])
+            ->whereDate('due_date', '<', now()->toDateString())
+            ->exists();
+
+        if ($hasUnpaidInvoice) {
+            return true;
+        }
+
+        if ((float) $this->monthly_subscription_fee <= 0 || $this->subscription_ends_at === null) {
+            return false;
+        }
+
+        $coverageEnds = $this->subscription_ends_at
+            ->copy()
+            ->addDays((int) ($this->grace_period_days ?? 0));
+
+        return $this->dateHasPassed($coverageEnds);
+    }
+
+    private function dateHasPassed(mixed $date): bool
+    {
+        if ($date === null) {
+            return false;
+        }
+
+        return Carbon::parse($date)->startOfDay()->lt(now()->startOfDay());
     }
 
     protected function availabilityLabel(): Attribute

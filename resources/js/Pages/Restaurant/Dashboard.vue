@@ -13,6 +13,7 @@ import {
     Calendar,
 } from '@lucide/vue';
 import { availabilityMeta, resolveAvailability } from '../../lib/restaurantAvailability';
+import { subscriptionPlanLabel } from '../../lib/subscriptionPlans';
 import { computed } from 'vue';
 
 const props = withDefaults(
@@ -37,6 +38,10 @@ const props = withDefaults(
             days_remaining?: number | null;
             is_overdue: boolean;
             monthly_subscription_fee: number;
+            billing_cycle?: string;
+            subscription_ends_at?: string | null;
+            grace_period_days?: number | null;
+            has_subscription?: boolean;
             has_unpaid_invoice: boolean;
             unpaid_amount: number;
             invoice_number?: string;
@@ -160,7 +165,11 @@ const formatOrderTime = (createdAt: string): string =>
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
                         <h3 class="text-sm font-bold text-stone-900">
-                            الاشتراك الشهري: {{ billing_info.monthly_subscription_fee }} ج.م
+                            <template v-if="billing_info.has_subscription">
+                                اشتراك {{ subscriptionPlanLabel(billing_info.billing_cycle) }}:
+                            </template>
+                            <template v-else>الاشتراك الشهري:</template>
+                            {{ billing_info.monthly_subscription_fee }} ج.م
                         </h3>
                         <span
                             v-if="billing_info.is_overdue"
@@ -176,6 +185,12 @@ const formatOrderTime = (createdAt: string): string =>
                         <span v-if="billing_info.payment_due_date" class="inline-flex items-center gap-1">
                             <Calendar class="h-3.5 w-3.5" />
                             موعد السداد: <strong class="text-stone-800">{{ billing_info.payment_due_date }}</strong>
+                        </span>
+                        <span v-if="billing_info.subscription_ends_at">
+                            ينتهي {{ billing_info.subscription_ends_at }}
+                            <template v-if="billing_info.grace_period_days">
+                                ثم {{ billing_info.grace_period_days }} يوم سماح
+                            </template>
                         </span>
                         <span
                             v-if="billingDays !== null"

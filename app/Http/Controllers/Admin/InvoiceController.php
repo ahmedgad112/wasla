@@ -187,9 +187,15 @@ class InvoiceController extends Controller
             }
 
             if ($restaurant->commission_type === 'SUBSCRIPTION' || (float) $restaurant->monthly_subscription_fee > 0) {
+                if ($restaurant->subscriptionInvoiceAlreadyCoversToday()) {
+                    continue;
+                }
+
                 $amount = (float) $restaurant->monthly_subscription_fee > 0 ? (float) $restaurant->monthly_subscription_fee : 500.00;
                 $type = 'SUBSCRIPTION';
                 $desc = 'اشتراك شهري في منصة وصلة لشهر '.now()->translatedFormat('F Y');
+                $graceDays = $restaurant->grace_period_days;
+                $dueDate = now()->addDays($graceDays === null ? 7 : (int) $graceDays)->toDateString();
             } else {
                 $comm = (float) Order::where('restaurant_id', $restaurant->id)
                     ->where('status', 'DELIVERED')
@@ -198,9 +204,8 @@ class InvoiceController extends Controller
                 $amount = $comm > 0 ? $comm : 100.00;
                 $type = 'COMMISSION';
                 $desc = 'عمولة مبيعات طلبات شهر '.now()->translatedFormat('F Y');
+                $dueDate = now()->addDays(7)->toDateString();
             }
-
-            $dueDate = now()->addDays(7)->toDateString();
 
             $invoice = Invoice::create([
                 'invoice_number' => 'INV-'.date('Ymd').'-'.str_pad(Invoice::count() + 1, 4, '0', STR_PAD_LEFT),

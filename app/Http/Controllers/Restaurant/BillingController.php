@@ -18,7 +18,7 @@ class BillingController extends Controller
         $staff = $user->restaurantStaff()->first();
         $restaurant = $staff?->restaurant;
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             abort(403, 'لا يوجد مطعم مرتبط بهذا الحساب.');
         }
 
@@ -47,23 +47,25 @@ class BillingController extends Controller
         $supportPhone = SystemSetting::where('key', 'support_phone')->value('value') ?? env('SUPPORT_PHONE', '01027961208');
 
         return Inertia::render('Restaurant/Billing/Index', [
-            'restaurant'     => [
-                'id'                       => $restaurant->id,
-                'name'                     => $restaurant->name,
-                'status'                   => $restaurant->status,
-                'commission_type'          => $restaurant->commission_type,
-                'commission_percentage'    => $restaurant->commission_percentage,
+            'restaurant' => [
+                'id' => $restaurant->id,
+                'name' => $restaurant->name,
+                'status' => $restaurant->status,
+                'commission_type' => $restaurant->commission_type,
+                'commission_percentage' => $restaurant->commission_percentage,
                 'monthly_subscription_fee' => $restaurant->monthly_subscription_fee,
-                'billing_cycle'            => $restaurant->billing_cycle,
-                'payment_due_date'         => $restaurant->payment_due_date?->format('Y-m-d'),
-                'billing_suspended_at'     => $restaurant->billing_suspended_at?->format('Y-m-d H:i'),
-                'suspension_reason'        => $restaurant->suspension_reason,
+                'billing_cycle' => $restaurant->billing_cycle,
+                'grace_period_days' => $restaurant->grace_period_days,
+                'subscription_ends_at' => $restaurant->subscription_ends_at?->format('Y-m-d'),
+                'payment_due_date' => $restaurant->payment_due_date?->format('Y-m-d'),
+                'billing_suspended_at' => $restaurant->billing_suspended_at?->format('Y-m-d H:i'),
+                'suspension_reason' => $restaurant->suspension_reason,
             ],
-            'invoices'       => $invoices,
+            'invoices' => $invoices,
             'pendingInvoice' => $pendingInvoice,
-            'daysUntilDue'   => $daysUntilDue,
-            'totalPaid'      => (float) $totalPaid,
-            'supportPhone'   => $supportPhone,
+            'daysUntilDue' => $daysUntilDue,
+            'totalPaid' => (float) $totalPaid,
+            'supportPhone' => $supportPhone,
         ]);
     }
 }

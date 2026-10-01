@@ -1,6 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, Save, Store, DollarSign, User, Bike } from '@lucide/vue';
+import { subscriptionPlans, type SubscriptionPlan } from '../../../lib/subscriptionPlans';
+
+const paymentMethods = [
+    { value: 'CASH', label: 'نقدي' },
+    { value: 'BANK_TRANSFER', label: 'تحويل بنكي' },
+    { value: 'VODAFONE_CASH', label: 'فودافون كاش' },
+    { value: 'INSTAPAY', label: 'إنستاباي' },
+];
 
 const form = useForm({
     name: '',
@@ -8,6 +17,7 @@ const form = useForm({
     address: '',
     phone: '',
     email: '',
+    billing_model: 'percentage' as 'subscription' | 'percentage',
     commission_rate: 15,
     delivery_provider: 'RESTAURANT' as 'PLATFORM' | 'RESTAURANT' | 'PICKUP',
     delivery_fee: 10,
@@ -16,6 +26,28 @@ const form = useForm({
     owner_name: '',
     owner_email: '',
     owner_password: '',
+    subscription_plan: 'MONTHLY' as SubscriptionPlan,
+    subscription_amount: 0,
+    subscription_paid: false,
+    grace_period_days: 7,
+    payment_method: 'CASH',
+});
+
+const coveragePreview = computed(() => {
+    const plan = subscriptionPlans.find((item) => item.value === form.subscription_plan);
+    const start = new Date();
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + (plan?.months ?? 1));
+    const due = new Date(end);
+    due.setDate(due.getDate() + (Number(form.grace_period_days) || 0));
+    const formatDate = (date: Date): string =>
+        date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    return {
+        label: plan?.label ?? 'شهري',
+        end: formatDate(end),
+        due: formatDate(due),
+    };
 });
 
 const handleSubmit = (): void => {
@@ -255,8 +287,38 @@ const handleSubmit = (): void => {
                     <span v-else-if="form.delivery_provider === 'PLATFORM'"> رسوم التوصيل ثابتة من المنصة ولا يقدر المطعم يغيّرها.</span>
                     <span v-else> الطلب للاستلام من المطعم بدون توصيل.</span>
                 </p>
-                <div class="max-w-xs">
-                    <label class="mb-1 block text-sm font-bold text-stone-600">نسبة العمولة (%)</label>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button
+                        type="button"
+                        :class="[
+                            'rounded-2xl border-2 p-4 text-right transition',
+                            form.billing_model === 'subscription'
+                                ? 'border-amber-500 bg-amber-50 text-amber-950'
+                                : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-stone-300',
+                        ]"
+                        @click="form.billing_model = 'subscription'"
+                    >
+                        <p class="text-sm font-black">اشتراك</p>
+                        <p class="mt-1 text-xs">رسوم ثابتة عن المدة: شهري أو أطول</p>
+                    </button>
+                    <button
+                        type="button"
+                        :class="[
+                            'rounded-2xl border-2 p-4 text-right transition',
+                            form.billing_model === 'percentage'
+                                ? 'border-amber-500 bg-amber-50 text-amber-950'
+                                : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-stone-300',
+                        ]"
+                        @click="form.billing_model = 'percentage'"
+                    >
+                        <p class="text-sm font-black">نسبة من كل طلب</p>
+                        <p class="mt-1 text-xs">تتخصم من قيمة الطلبات فقط</p>
+                    </button>
+                </div>
+                <p v-if="form.errors.billing_model" class="mt-2 text-xs text-red-500">{{ form.errors.billing_model }}</p>
+
+                <div v-if="form.billing_model === 'percentage'" class="mt-5 max-w-xs">
+                    <label class="mb-1 block text-sm font-bold text-stone-600">النسبة من كل طلب (%)</label>
                     <input
                         v-model.number="form.commission_rate"
                         type="number"
@@ -265,7 +327,92 @@ const handleSubmit = (): void => {
                         max="100"
                         class="w-full rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none"
                     />
+                    <p class="mt-1 text-xs text-stone-500">مثال: 15 يعني المنصة بتاخد 15% من قيمة كل طلب.</p>
                     <p v-if="form.errors.commission_rate" class="mt-1 text-xs text-red-500">{{ form.errors.commission_rate }}</p>
+                </div>
+
+                <div v-else class="mt-6 border-t border-stone-100 pt-5">
+                    <h3 class="text-sm font-black text-stone-800">اشتراك المطعم</h3>
+                    <p class="mt-1 text-xs text-stone-500">
+                        اختَر مدة الاشتراك، ولو تم الدفع يتسجل المبلغ في الأرباح والتحصيل. مدة السماح بتتحسب بعد نهاية المدة وقبل إيقاف الحساب. مفيش نسبة على الطلبات.
+                    </p>
+
+                    <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <button
+                            v-for="plan in subscriptionPlans"
+                            :key="plan.value"
+                            type="button"
+                            :class="[
+                                'rounded-2xl border-2 p-3 text-right transition',
+                                form.subscription_plan === plan.value
+                                    ? 'border-amber-500 bg-amber-50 text-amber-950'
+                                    : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-stone-300',
+                            ]"
+                            @click="form.subscription_plan = plan.value"
+                        >
+                            <p class="text-sm font-black">{{ plan.label }}</p>
+                        </button>
+                    </div>
+                    <p v-if="form.errors.subscription_plan" class="mt-2 text-xs text-red-500">{{ form.errors.subscription_plan }}</p>
+
+                    <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-bold text-stone-600">قيمة الاشتراك (ج.م)</label>
+                            <input
+                                v-model.number="form.subscription_amount"
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none"
+                            />
+                            <p v-if="form.errors.subscription_amount" class="mt-1 text-xs text-red-500">{{ form.errors.subscription_amount }}</p>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-bold text-stone-600">مدة السماح بعد انتهاء الاشتراك (أيام)</label>
+                            <input
+                                v-model.number="form.grace_period_days"
+                                type="number"
+                                min="0"
+                                max="365"
+                                step="1"
+                                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none"
+                            />
+                            <p v-if="form.errors.grace_period_days" class="mt-1 text-xs text-red-500">{{ form.errors.grace_period_days }}</p>
+                        </div>
+                    </div>
+
+                    <label class="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                        <input v-model="form.subscription_paid" type="checkbox" class="mt-1 h-4 w-4 accent-amber-500" />
+                        <span>
+                            <span class="block text-sm font-black text-stone-800">تم دفع الاشتراك</span>
+                            <span class="mt-1 block text-xs text-stone-500">
+                                المبلغ يتسجل فاتورة مدفوعة وسند تحصيل، ويظهر في الأرباح والتدفقات.
+                            </span>
+                        </span>
+                    </label>
+
+                    <div v-if="form.subscription_paid" class="mt-4 max-w-xs">
+                        <label class="mb-1 block text-sm font-bold text-stone-600">طريقة الدفع</label>
+                        <select
+                            v-model="form.payment_method"
+                            class="w-full rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none"
+                        >
+                            <option v-for="method in paymentMethods" :key="method.value" :value="method.value">
+                                {{ method.label }}
+                            </option>
+                        </select>
+                        <p v-if="form.errors.payment_method" class="mt-1 text-xs text-red-500">{{ form.errors.payment_method }}</p>
+                    </div>
+
+                    <p
+                        v-if="Number(form.subscription_amount) > 0"
+                        class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900"
+                    >
+                        اشتراك {{ coveragePreview.label }} ينتهي في {{ coveragePreview.end }}.
+                        الحساب يفضل شغال مدة السماح، والإيقاف يبدأ بعد {{ coveragePreview.due }}.
+                        <template v-if="form.subscription_paid"> المبلغ هيتحسب ضمن أرباح المنصة والتحصيل من تاريخ الإنشاء.</template>
+                        <template v-else> الاشتراك هيتسجل فاتورة غير محصّلة، ومش هيتحسب ربح لحد ما يتم الدفع.</template>
+                    </p>
                 </div>
             </div>
 

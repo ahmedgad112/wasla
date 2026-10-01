@@ -5,6 +5,7 @@ import { Restaurant, PaginatedResponse } from '../../../Types';
 import { Plus, Search, Eye, Pencil, ExternalLink, Trash2 } from '@lucide/vue';
 import ConfirmModal from '../../../Components/ConfirmModal.vue';
 import { resolveMediaUrl } from '../../../lib/media';
+import { subscriptionPeriodLabel } from '../../../lib/subscriptionPlans';
 
 const props = defineProps<{
     restaurants: PaginatedResponse<Restaurant & { orders_count: number; delivery_drivers_count: number }>;
@@ -183,7 +184,7 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                                     {{ r.commission_type === 'PERCENTAGE' ? `${r.commission_percentage}% عمولة` : 'اشتراك شهري' }}
                                 </span>
                                 <span v-if="Number(r.monthly_subscription_fee) > 0" class="text-[10px] text-stone-400">
-                                    +{{ r.monthly_subscription_fee }} ج.م / شهر
+                                    +{{ r.monthly_subscription_fee }} ج.م / {{ subscriptionPeriodLabel(r.billing_cycle) }}
                                 </span>
                             </td>
                             <td class="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">

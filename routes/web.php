@@ -152,6 +152,8 @@ Route::middleware(['auth', 'portal:ADMIN', 'route.permission'])->prefix('admin')
     // Finance
     Route::prefix('finance')->name('finance.')->group(function () {
         Route::get('/', [AdminFinance::class, 'overview'])->name('overview');
+        Route::get('/restaurants/{id}', [AdminFinance::class, 'restaurantStatement'])->name('restaurants.show');
+        Route::post('/restaurants/{id}/renew-subscription', [AdminFinance::class, 'renewSubscription'])->name('restaurants.renew-subscription');
         Route::get('/revenue', [AdminFinance::class, 'revenue'])->name('revenue');
         Route::get('/expenses', [AdminFinance::class, 'expenses'])->name('expenses');
         Route::post('/expenses', [AdminFinance::class, 'storeExpense'])->name('expenses.store');

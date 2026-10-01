@@ -100,13 +100,18 @@ class BillingHubController extends Controller
                 continue;
             }
 
+            if ($restaurant->subscriptionInvoiceAlreadyCoversToday()) {
+                continue;
+            }
+
             $amount = (float) $restaurant->monthly_subscription_fee;
             if ($amount <= 0) {
-                $amount = 500.00; // اشتراك شهري ثابت افتراضي
+                $amount = 500.00;
             }
             $type = 'SUBSCRIPTION';
 
-            $dueDate = now()->addDays(7)->toDateString();
+            $graceDays = $restaurant->grace_period_days;
+            $dueDate = now()->addDays($graceDays === null ? 7 : (int) $graceDays)->toDateString();
 
             $invoice = Invoice::create([
                 'invoice_number' => 'INV-'.date('Ymd').'-'.str_pad(Invoice::count() + 1, 4, '0', STR_PAD_LEFT),

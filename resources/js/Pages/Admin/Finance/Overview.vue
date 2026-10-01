@@ -20,6 +20,7 @@ import {
     Check,
     CheckCircle2,
 } from '@lucide/vue';
+import { subscriptionPlanLabel } from '../../../lib/subscriptionPlans';
 
 interface PlatformProfit {
     subscription_revenue: number;
@@ -38,6 +39,9 @@ interface RestaurantProfit {
     commission_type: string;
     commission_rate: number;
     subscription_fee: number;
+    billing_cycle?: string;
+    subscription_ends_at?: string | null;
+    payment_due_date?: string | null;
     total_orders: number;
     delivered_orders: number;
     cancelled_orders: number;
@@ -501,16 +505,33 @@ const footerNet = computed(() =>
                                                 ]"
                                             />
                                             <div>
-                                                <span class="font-black text-stone-900 dark:text-white text-sm block">
+                                                <Link
+                                                    :href="`/admin/finance/restaurants/${r.id}`"
+                                                    class="font-black text-stone-900 dark:text-white text-sm block hover:text-orange-600"
+                                                >
                                                     {{ r.name }}
-                                                </span>
-                                                <div class="flex items-center gap-1.5 mt-0.5">
+                                                </Link>
+                                                <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                     <span
+                                                        v-if="Number(r.subscription_fee) > 0"
+                                                        class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200"
+                                                    >
+                                                        اشتراك {{ subscriptionPlanLabel(r.billing_cycle) }}:
+                                                        {{ fmt(r.subscription_fee) }} ج
+                                                    </span>
+                                                    <span
+                                                        v-if="r.commission_type === 'PERCENTAGE' || r.commission_type === 'HYBRID'"
+                                                        class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300"
+                                                    >
+                                                        عمولة {{ r.commission_rate }}%
+                                                    </span>
+                                                    <span
+                                                        v-else-if="Number(r.subscription_fee) <= 0"
                                                         class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300"
                                                     >
                                                         {{
                                                             r.commission_type === 'SUBSCRIPTION'
-                                                                ? `اشتراك: ${fmt(r.subscription_fee)} ج/شهر`
+                                                                ? 'اشتراك'
                                                                 : `عمولة ${r.commission_rate}%`
                                                         }}
                                                     </span>
@@ -602,6 +623,13 @@ const footerNet = computed(() =>
                                     </td>
 
                                     <td class="py-4 px-4 text-center">
+                                        <div class="inline-flex flex-col items-center gap-1.5">
+                                        <Link
+                                            :href="`/admin/finance/restaurants/${r.id}`"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-orange-600 text-white font-bold text-xs hover:bg-orange-500"
+                                        >
+                                            دخول الكشف
+                                        </Link>
                                         <button
                                             type="button"
                                             :class="[
@@ -616,6 +644,7 @@ const footerNet = computed(() =>
                                             <ChevronUp v-if="expandedRow === r.id" class="w-3.5 h-3.5" />
                                             <ChevronDown v-else class="w-3.5 h-3.5" />
                                         </button>
+                                        </div>
                                     </td>
                                 </tr>
 
@@ -639,11 +668,17 @@ const footerNet = computed(() =>
                                                 </div>
                                                 <div class="flex items-center gap-2">
                                                     <Link
-                                                        :href="`/admin/billing?restaurant_id=${r.id}`"
+                                                        :href="`/admin/finance/restaurants/${r.id}`"
                                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-xs"
                                                     >
-                                                        <span>عرض الفواتير والتحصيل</span>
+                                                        <span>تجديد الاشتراك</span>
                                                         <ExternalLink class="w-3.5 h-3.5" />
+                                                    </Link>
+                                                    <Link
+                                                        :href="`/admin/billing?restaurant_id=${r.id}`"
+                                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200 text-xs font-bold transition"
+                                                    >
+                                                        <span>عرض الفواتير والتحصيل</span>
                                                     </Link>
                                                 </div>
                                             </div>

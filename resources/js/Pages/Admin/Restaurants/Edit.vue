@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import { ArrowLeft, Save, Store, DollarSign, Clock, Bike } from '@lucide/vue';
+import { subscriptionPlans, subscriptionPlanLabel } from '../../../lib/subscriptionPlans';
 
 interface Restaurant {
     id: number;
@@ -22,6 +23,11 @@ interface Restaurant {
     commission_type?: string;
     commission_percentage?: number;
     monthly_subscription_fee?: number;
+    billing_cycle?: string;
+    grace_period_days?: number | null;
+    subscription_starts_at?: string | null;
+    subscription_ends_at?: string | null;
+    payment_due_date?: string | null;
     student_discount_percentage?: number;
 }
 
@@ -55,6 +61,8 @@ const form = useForm({
     commission_type: props.restaurant.commission_type ?? 'PERCENTAGE',
     commission_percentage: Number(props.restaurant.commission_percentage ?? 15),
     monthly_subscription_fee: Number(props.restaurant.monthly_subscription_fee ?? 0),
+    billing_cycle: props.restaurant.billing_cycle ?? 'MONTHLY',
+    grace_period_days: Number(props.restaurant.grace_period_days ?? 7),
     student_discount_percentage: Number(props.restaurant.student_discount_percentage ?? 0),
 });
 
@@ -298,7 +306,7 @@ const handleSubmit = (): void => {
                         />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm text-stone-400">اشتراك شهري (ج.م)</label>
+                        <label class="mb-1 block text-sm text-stone-400">قيمة الاشتراك (ج.م)</label>
                         <input
                             v-model.number="form.monthly_subscription_fee"
                             type="number"
@@ -306,6 +314,34 @@ const handleSubmit = (): void => {
                             min="0"
                             class="w-full rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-stone-900 transition-colors focus:border-orange-500 focus:outline-none"
                         />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm text-stone-400">مدة الاشتراك</label>
+                        <select
+                            v-model="form.billing_cycle"
+                            class="w-full rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-stone-900 transition-colors focus:border-orange-500 focus:outline-none"
+                        >
+                            <option v-for="plan in subscriptionPlans" :key="plan.value" :value="plan.value">
+                                {{ plan.label }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm text-stone-400">مدة السماح بعد الانتهاء (أيام)</label>
+                        <input
+                            v-model.number="form.grace_period_days"
+                            type="number"
+                            min="0"
+                            max="365"
+                            class="w-full rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-stone-900 transition-colors focus:border-orange-500 focus:outline-none"
+                        />
+                    </div>
+                    <div v-if="restaurant.subscription_ends_at" class="md:col-span-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900">
+                        اشتراك {{ subscriptionPlanLabel(restaurant.billing_cycle) }}
+                        من {{ restaurant.subscription_starts_at?.slice(0, 10) }}
+                        إلى {{ restaurant.subscription_ends_at.slice(0, 10) }}.
+                        الإيقاف بعد انتهاء المدة ومدة السماح
+                        <template v-if="restaurant.payment_due_date"> ({{ restaurant.payment_due_date.slice(0, 10) }})</template>.
                     </div>
                 </div>
             </div>

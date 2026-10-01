@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import type { PaginatedResponse } from '../../../Types';
+import { subscriptionPeriodLabel, subscriptionPlanLabel } from '../../../lib/subscriptionPlans';
 import {
     Receipt,
     CheckCircle2,
@@ -45,6 +46,8 @@ const props = withDefaults(
             commission_percentage?: number;
             monthly_subscription_fee?: number;
             billing_cycle: string;
+            grace_period_days?: number | null;
+            subscription_ends_at?: string | null;
             payment_due_date?: string;
             billing_suspended_at?: string;
             suspension_reason?: string;
@@ -104,7 +107,11 @@ const copyPhone = (): void => {
 const dueDateLabel = computed(() => {
     if (!props.pendingInvoice) {
         const days = typeof props.daysUntilDue === 'number' && props.daysUntilDue > 0 ? props.daysUntilDue : 30;
-        return `تم سداد اشتراك هذا الشهر بنجاح ✅ (التجديد القادم بعد ${days} يوم)`;
+        const grace =
+            typeof props.restaurant.grace_period_days === 'number' && props.restaurant.grace_period_days > 0
+                ? ` شاملة ${props.restaurant.grace_period_days} يوم سماح`
+                : '';
+        return `الاشتراك مسدد ✅ (التجديد أو الإيقاف بعد ${days} يوم${grace})`;
     }
     if (typeof props.daysUntilDue !== 'number') {
         return 'دورة السداد: شهرية';
@@ -195,15 +202,23 @@ const dueDateLabel = computed(() => {
                     <CreditCard class="w-5 h-5 text-orange-500" />
                 </div>
                 <div class="text-base font-black text-stone-900 dark:text-white">
-                    <template v-if="isSubscription">اشتراك شهري ثابت</template>
+                    <template v-if="isSubscription || (restaurant.monthly_subscription_fee && restaurant.monthly_subscription_fee > 0)">
+                        اشتراك {{ subscriptionPlanLabel(restaurant.billing_cycle) }}
+                    </template>
                     <template v-else-if="restaurant.commission_type === 'PERCENTAGE'">
                         نسبة عمولة (%{{ restaurant.commission_percentage || 0 }})
                     </template>
                     <template v-else>حسب الاتفاق</template>
                 </div>
                 <p class="text-[11px] text-stone-400 mt-1">
-                    <template v-if="restaurant.commission_type === 'SUBSCRIPTION' || (restaurant.monthly_subscription_fee && restaurant.monthly_subscription_fee > 0)">
-                        {{ Number(restaurant.monthly_subscription_fee).toLocaleString() }} ج.م شهرياً (بدون عمولة على المبيعات)
+                    <template v-if="restaurant.monthly_subscription_fee && restaurant.monthly_subscription_fee > 0">
+                        {{ Number(restaurant.monthly_subscription_fee).toLocaleString() }} ج.م / {{ subscriptionPeriodLabel(restaurant.billing_cycle) }}
+                        <template v-if="restaurant.grace_period_days">
+                            + {{ restaurant.grace_period_days }} يوم سماح
+                        </template>
+                        <template v-if="restaurant.commission_type === 'PERCENTAGE' && restaurant.commission_percentage">
+                            + عمولة {{ restaurant.commission_percentage }}%
+                        </template>
                     </template>
                     <template v-else>نسبة مقتطعة من إجمالي مبيعات الطلبات</template>
                 </p>
