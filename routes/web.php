@@ -69,6 +69,7 @@ Route::middleware('guest')->group(function () {
 
 // Logout (any authenticated user)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+Route::post('/impersonation/leave', [AuthController::class, 'leaveImpersonation'])->name('impersonation.leave')->middleware('auth');
 
 // =====================================================
 // CUSTOMER ROUTES — Authenticated customers only
@@ -144,6 +145,8 @@ Route::middleware(['auth', 'portal:ADMIN', 'route.permission'])->prefix('admin')
     Route::get('/customers/{id}', [AdminCustomer::class, 'show'])->name('customers.show');
     Route::match(['post', 'patch'], '/customers/{id}/verify-student', [AdminCustomer::class, 'verifyStudent'])->name('customers.verify-student');
     Route::match(['post', 'patch'], '/customers/{id}/reject-student', [AdminCustomer::class, 'rejectStudent'])->name('customers.reject-student');
+    Route::post('/customers/{id}/login-as', [AdminCustomer::class, 'loginAs'])->name('customers.login-as');
+    Route::post('/customers/{id}/toggle-active', [AdminCustomer::class, 'toggleActive'])->name('customers.toggle-active');
 
     // Users (admin user management)
     Route::resource('users', AdminUser::class)->except(['show']);

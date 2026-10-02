@@ -20,7 +20,7 @@ import {
     Menu,
     X,
     ExternalLink,
-    GraduationCap,
+    UserRound,
     Bike,
 } from '@lucide/vue';
 import type { SharedInertiaProps } from '../Types';
@@ -59,7 +59,7 @@ const navGroups = [
             { label: 'غرفة التحكم', href: '/admin/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
             { label: 'المطاعم الشريكة', href: '/admin/restaurants', icon: Store, permission: 'restaurants.view' },
             { label: 'طلبات المنصة', href: '/admin/orders', icon: ShoppingBag, permission: 'orders.view' },
-            { label: 'العملاء والطلاب', href: '/admin/customers', icon: GraduationCap, permission: 'customers.view' },
+            { label: 'العملاء', href: '/admin/customers', icon: UserRound, permission: 'customers.view' },
             { label: 'المستخدمون', href: '/admin/users', icon: Users, permission: 'users.view' },
             { label: 'كباتن التوصيل', href: '/admin/delivery-drivers', icon: Bike, permission: 'drivers.view' },
         ],

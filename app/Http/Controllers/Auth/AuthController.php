@@ -91,8 +91,27 @@ class AuthController extends Controller
 
     public function logout(): RedirectResponse
     {
+        if (session()->has('impersonator_id')) {
+            return $this->leaveImpersonation();
+        }
+
         $this->authService->logout();
 
         return redirect()->route('login');
+    }
+
+    public function leaveImpersonation(): RedirectResponse
+    {
+        if (! session()->has('impersonator_id')) {
+            return redirect()->route('home');
+        }
+
+        if (! $this->authService->stopImpersonation()) {
+            return redirect()->route('login')->with('error', 'تعذر الرجوع لحساب الإدارة.');
+        }
+
+        return redirect()
+            ->route('admin.customers.index')
+            ->with('success', 'رجعت لحساب الإدارة.');
     }
 }

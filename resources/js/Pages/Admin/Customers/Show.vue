@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeft,
@@ -10,7 +10,9 @@ import {
     XCircle,
     Phone,
     CheckCircle2,
+    LogIn,
 } from '@lucide/vue';
+import ConfirmModal from '../../../Components/ConfirmModal.vue';
 
 interface Customer {
     id: number;
@@ -84,6 +86,17 @@ const studentStatusLabel = computed(() => {
     return 'غير موثق';
 });
 
+const confirmLoginAs = ref(false);
+
+const handleLoginAs = (): void => {
+    confirmLoginAs.value = false;
+    router.post(`/admin/customers/${props.customer.id}/login-as`);
+};
+
+const handleToggleActive = (): void => {
+    router.post(`/admin/customers/${props.customer.id}/toggle-active`, {}, { preserveScroll: true });
+};
+
 const handleVerify = (): void => {
     router.post(`/admin/customers/${props.customer.id}/verify-student`);
 };
@@ -117,6 +130,16 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
                             <CheckCircle2 class="w-3.5 h-3.5" /> طالب موثق
                         </span>
                         <span
+                            :class="[
+                                'rounded-full px-3 py-1 text-xs font-bold',
+                                customer.user.is_active
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                    : 'bg-stone-200 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
+                            ]"
+                        >
+                            {{ customer.user.is_active ? 'نشط' : 'موقوف' }}
+                        </span>
+                        <span
                             v-if="customer.student_status === 'PENDING'"
                             class="flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold animate-pulse"
                         >
@@ -130,6 +153,25 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
             </div>
 
             <div v-if="$can('customers.manage')" class="flex items-center gap-2">
+                <button
+                    type="button"
+                    :class="[
+                        'px-4 py-2 rounded-xl text-white text-xs font-bold shadow transition',
+                        customer.user.is_active ? 'bg-stone-700 hover:bg-stone-800' : 'bg-emerald-600 hover:bg-emerald-700',
+                    ]"
+                    @click="handleToggleActive"
+                >
+                    {{ customer.user.is_active ? 'إيقاف الحساب' : 'تفعيل الحساب' }}
+                </button>
+                <button
+                    v-if="customer.user.is_active"
+                    type="button"
+                    class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow transition flex items-center gap-1.5"
+                    @click="confirmLoginAs = true"
+                >
+                    <LogIn class="w-4 h-4" />
+                    <span>تسجيل الدخول كـ هذا العميل</span>
+                </button>
                 <button
                     v-if="customer.student_status !== 'APPROVED'"
                     type="button"
@@ -293,4 +335,14 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
             </div>
         </div>
     </div>
+
+    <ConfirmModal
+        :is-open="confirmLoginAs"
+        title="تسجيل الدخول كعميل"
+        :message="`هل تريد فتح حساب «${customer.user.name}»؟ تقدر ترجع للإدارة من الشريط أعلى الصفحة.`"
+        confirm-text="تسجيل الدخول"
+        variant="warning"
+        @confirm="handleLoginAs"
+        @cancel="confirmLoginAs = false"
+    />
 </template>

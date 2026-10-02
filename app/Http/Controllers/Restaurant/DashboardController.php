@@ -38,20 +38,44 @@ class DashboardController extends Controller
                 'active_drivers' => DeliveryDriver::where('restaurant_id', $restaurantId)->where('is_active', true)->where('availability_status', 'AVAILABLE')->count(),
             ];
 
-            // Top selling items (last 30 days)
-            $topItems = OrderItem::whereHas('order', fn ($q) => $q->where('restaurant_id', $restaurantId)->where('status', 'DELIVERED')->where('created_at', '>=', now()->subDays(30)))
+            // Plain arrays only. The file cache refuses to unserialize PHP objects.
+            $topItems = OrderItem::query()
+                ->whereHas('order', fn ($query) => $query
+                    ->where('restaurant_id', $restaurantId)
+                    ->where('status', 'DELIVERED')
+                    ->where('created_at', '>=', now()->subDays(30)))
                 ->selectRaw('name, SUM(quantity) as total_qty, SUM(total_price) as total_revenue')
                 ->groupBy('name')
                 ->orderByDesc('total_qty')
                 ->take(5)
-                ->get();
+                ->get()
+                ->map(fn (OrderItem $item): array => [
+                    'name' => (string) $item->getAttribute('name'),
+                    'total_qty' => (int) $item->getAttribute('total_qty'),
+                    'total_revenue' => round((float) $item->getAttribute('total_revenue'), 2),
+                ])
+                ->all();
 
-            // Recent orders
-            $recentOrders = Order::where('restaurant_id', $restaurantId)
+            $recentOrders = Order::query()
+                ->where('restaurant_id', $restaurantId)
                 ->with(['customer.user'])
                 ->latest()
                 ->take(10)
-                ->get();
+                ->get()
+                ->map(fn (Order $order): array => [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'status' => $order->status,
+                    'total_amount' => round((float) $order->total_amount, 2),
+                    'address' => $order->address,
+                    'created_at' => $order->created_at?->toIso8601String(),
+                    'customer' => [
+                        'user' => [
+                            'name' => $order->customer?->user?->name,
+                        ],
+                    ],
+                ])
+                ->all();
 
             // Subscription & Billing details for the restaurant
             $pendingInvoice = Invoice::where('restaurant_id', $restaurantId)

@@ -74,6 +74,9 @@ class HandleInertiaRequests extends Middleware
             'app_slogan' => $appSlogan,
             'support_phone' => $supportPhone,
             'shell_restaurant' => $shellRestaurant,
+            'impersonation' => $request->session()->has('impersonator_id')
+                ? ['admin_name' => (string) $request->session()->get('impersonator_name', '')]
+                : null,
         ]);
     }
 }

@@ -120,7 +120,7 @@ withDefaults(
 
             <div class="group relative overflow-hidden p-6 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10">
                 <div class="flex items-center justify-between text-xs text-stone-400 font-bold mb-2">
-                    <span>الطلاب والعملاء المسجلين</span>
+                    <span>العملاء المسجلين</span>
                     <GraduationCap class="w-4 h-4 text-blue-500" />
                 </div>
                 <p class="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white">

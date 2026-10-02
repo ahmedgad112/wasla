@@ -7,7 +7,6 @@ import { useAvailabilityStore } from '../../Stores/availabilityStore';
 import {
     Search,
     Percent,
-    GraduationCap,
     Flame,
     Store,
     Crown,
@@ -126,25 +125,6 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                 >
                     {{ item.label }}
                 </button>
-            </section>
-
-            <section class="px-4 sm:px-6 lg:px-8">
-                <Link
-                    :href="auth?.user ? '/customer/profile' : '/register'"
-                    prefetch
-                    class="flex items-center justify-between rounded-2xl bg-gradient-to-l from-orange-500 to-amber-500 px-4 py-3.5 text-white shadow-lg shadow-orange-500/20"
-                >
-                    <div class="flex items-center gap-3">
-                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-white/20">
-                            <GraduationCap class="h-5 w-5" />
-                        </span>
-                        <div>
-                            <p class="text-sm font-black">خصم طلاب الجامعة</p>
-                            <p class="text-[11px] text-orange-50">ارفع الكارنيه ووفّر لحد 25%</p>
-                        </div>
-                    </div>
-                    <ChevronLeft class="h-5 w-5" />
-                </Link>
             </section>
 
             <section v-if="activeOffers.length > 0" class="px-4 sm:px-6 lg:px-8">

@@ -400,6 +400,9 @@ export interface SharedProps extends Record<string, unknown> {
         availability_status?: AvailabilityStatus;
         is_open?: boolean;
     } | null;
+    impersonation?: {
+        admin_name: string;
+    } | null;
     errors: Record<string, string>;
 }
 

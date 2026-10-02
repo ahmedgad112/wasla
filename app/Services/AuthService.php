@@ -168,6 +168,56 @@ class AuthService
     }
 
     /**
+     * Open the customer portal as this account while keeping the admin session recoverable.
+     */
+    public function startCustomerImpersonation(User $customerUser): void
+    {
+        $admin = Auth::user();
+
+        ActivityLog::log('CUSTOMER_LOGIN_AS', 'User', $customerUser->id, null, [
+            'admin_id' => $admin?->id,
+        ]);
+
+        session([
+            'impersonator_id' => $admin?->id,
+            'impersonator_name' => $admin?->name,
+        ]);
+
+        Auth::login($customerUser);
+        request()->session()->regenerate();
+    }
+
+    /**
+     * Restore the admin who used "login as", or end the session if that account is gone.
+     */
+    public function stopImpersonation(): bool
+    {
+        $adminId = session('impersonator_id');
+
+        if (! is_numeric($adminId)) {
+            return false;
+        }
+
+        $customerUserId = Auth::id();
+        $admin = User::query()->find((int) $adminId);
+
+        session()->forget(['impersonator_id', 'impersonator_name']);
+
+        if (! $admin || ! $admin->is_active || ! $admin->isAdmin()) {
+            $this->logout();
+
+            return false;
+        }
+
+        Auth::login($admin);
+        request()->session()->regenerate();
+
+        ActivityLog::log('IMPERSONATION_ENDED', 'User', is_int($customerUserId) ? $customerUserId : null);
+
+        return true;
+    }
+
+    /**
      * Log user out and invalidate session.
      */
     public function logout(): void

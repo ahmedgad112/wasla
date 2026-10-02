@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
 use App\Models\ActivityLog;
+use App\Models\Customer;
+use App\Services\AuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,8 +21,8 @@ class CustomerController extends Controller
         if ($request->filled('search')) {
             $query->whereHas('user', function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%")
-                  ->orWhere('phone', 'like', "%{$request->search}%");
+                    ->orWhere('email', 'like', "%{$request->search}%")
+                    ->orWhere('phone', 'like', "%{$request->search}%");
             });
         }
 
@@ -31,7 +32,7 @@ class CustomerController extends Controller
 
         return Inertia::render('Admin/Customers/Index', [
             'customers' => $query->withCount('orders')->paginate(20)->withQueryString(),
-            'filters'   => $request->only('search', 'student_status'),
+            'filters' => $request->only('search', 'student_status'),
         ]);
     }
 
@@ -48,7 +49,7 @@ class CustomerController extends Controller
             ->get();
 
         return Inertia::render('Admin/Customers/Show', [
-            'customer'      => $customer,
+            'customer' => $customer,
             'recent_orders' => $recentOrders,
         ]);
     }
@@ -57,10 +58,11 @@ class CustomerController extends Controller
     {
         $customer = Customer::findOrFail($id);
         $customer->update([
-            'student_status'      => 'APPROVED',
+            'student_status' => 'APPROVED',
             'student_verified_at' => now(),
         ]);
         ActivityLog::log('STUDENT_VERIFIED', 'Customer', $customer->id);
+
         return back()->with('success', 'تم تأكيد هوية الطالب وتفعيل الخصم.');
     }
 
@@ -69,6 +71,44 @@ class CustomerController extends Controller
         $customer = Customer::findOrFail($id);
         $customer->update(['student_status' => 'REJECTED']);
         ActivityLog::log('STUDENT_REJECTED', 'Customer', $customer->id);
+
         return back()->with('success', 'تم رفض طلب التحقق من الهوية الطلابية.');
+    }
+
+    public function toggleActive(int $id): RedirectResponse
+    {
+        $customer = Customer::with('user')->findOrFail($id);
+        $user = $customer->user;
+
+        if ($user === null || ! $user->isCustomer()) {
+            return back()->with('error', 'لا يمكن تغيير حالة هذا الحساب.');
+        }
+
+        $user->update(['is_active' => ! $user->is_active]);
+        ActivityLog::log('CUSTOMER_TOGGLE_ACTIVE', 'Customer', $customer->id, null, [
+            'is_active' => $user->is_active,
+            'user_id' => $user->id,
+        ]);
+
+        return back()->with(
+            'success',
+            $user->is_active
+                ? 'تم تفعيل حساب العميل.'
+                : 'تم إيقاف حساب العميل. لن يقدر يسجّل الدخول.'
+        );
+    }
+
+    public function loginAs(int $id, AuthService $authService): RedirectResponse
+    {
+        $customer = Customer::with('user')->findOrFail($id);
+        $user = $customer->user;
+
+        if ($user === null || ! $user->isCustomer() || ! $user->is_active) {
+            return back()->with('error', 'لا يمكن تسجيل الدخول بهذا الحساب.');
+        }
+
+        $authService->startCustomerImpersonation($user);
+
+        return redirect()->route('customer.dashboard');
     }
 }

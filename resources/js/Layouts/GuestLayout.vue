@@ -42,6 +42,7 @@ function applyTheme(isDark: boolean): void {
 const page = usePage<SharedInertiaProps>();
 const auth = computed(() => page.props.auth);
 const flash = computed(() => page.props.flash);
+const impersonation = computed(() => page.props.impersonation);
 const supportPhone = computed(() => page.props.support_phone);
 const url = computed(() => page.url);
 const darkMode = ref(false);
@@ -168,6 +169,21 @@ warmNavigation(() => {
                 </div>
             </div>
         </header>
+
+        <div
+            v-if="impersonation"
+            class="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-3 bg-amber-400 px-4 py-2 text-center text-xs font-bold text-stone-950"
+        >
+            <span>أنت مسجّل الدخول كـ {{ auth?.user?.name }}</span>
+            <Link
+                href="/impersonation/leave"
+                method="post"
+                as="button"
+                class="rounded-full bg-stone-950 px-3 py-1 text-[11px] font-bold text-white"
+            >
+                العودة للإدارة
+            </Link>
+        </div>
 
         <div v-if="flash?.success" class="bg-emerald-500 px-4 py-2 text-center text-xs font-bold text-white">
             {{ flash.success }}

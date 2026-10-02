@@ -336,16 +336,16 @@ const formatOrderTime = (createdAt: string): string =>
                 <div v-else class="space-y-4">
                     <div
                         v-for="(item, idx) in top_items"
-                        :key="idx"
-                        class="flex items-center justify-between text-xs"
+                        :key="item.name"
+                        class="flex items-center justify-between gap-3 text-xs"
                     >
-                        <div class="flex items-center gap-2">
-                            <span class="flex h-5 w-5 items-center justify-center rounded-md bg-stone-100 text-[10px] font-bold text-stone-600">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-stone-100 text-[10px] font-bold text-stone-600">
                                 {{ idx + 1 }}
                             </span>
-                            <span class="max-w-[140px] truncate font-bold text-stone-800">{{ item.name }}</span>
+                            <span class="truncate font-bold text-stone-800" :title="item.name">{{ item.name }}</span>
                         </div>
-                        <div class="text-left">
+                        <div class="shrink-0 text-left">
                             <span class="font-bold text-stone-900">{{ item.total_qty }} طلب</span>
                             <span class="block text-[10px] text-stone-400">{{ item.total_revenue }} ج.م</span>
                         </div>
