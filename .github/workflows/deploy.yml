@@ -1,0 +1,95 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-wasla
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_sqlite
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run tests
+        run: php artisan test --compact
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Build frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' '[premium106-3.web-hosting.com]:21098 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJmaRoGJ1VMM6R4gMBqsGeWRi7EEGcAI/fgfsf80U3qS' >> ~/.ssh/known_hosts
+
+      - name: Upload application
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'node_modules/' \
+            --exclude 'vendor/' \
+            --exclude 'storage/' \
+            --exclude '.env' \
+            --exclude '.cursor/' \
+            --exclude 'public/hot' \
+            --exclude 'public/storage' \
+            --exclude '*.sqlite' \
+            --exclude '/.htaccess' \
+            --exclude 'cgi-bin/' \
+            --exclude '.well-known/' \
+            --filter 'protect /.htaccess' \
+            --filter 'protect /.env' \
+            --filter 'protect *.sqlite' \
+            --filter 'protect storage/***' \
+            --filter 'protect vendor/***' \
+            --filter 'protect cgi-bin/***' \
+            --filter 'protect .well-known/***' \
+            --filter 'protect public/images/***' \
+            --filter 'protect public/storage' \
+            -e "ssh -i ~/.ssh/deploy_key -p 21098 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            ./ halwuecc@premium106-3.web-hosting.com:/home/halwuecc/wasla.gaddevelopment.site/
+
+      - name: Install dependencies and migrate
+        run: |
+          ssh -i ~/.ssh/deploy_key -p 21098 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            halwuecc@premium106-3.web-hosting.com \
+            bash /home/halwuecc/wasla.gaddevelopment.site/scripts/server-deploy.sh

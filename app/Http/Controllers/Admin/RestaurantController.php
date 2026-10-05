@@ -14,6 +14,8 @@ use App\Services\PublicCatalogCache;
 use App\Support\SiteSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -81,6 +83,8 @@ class RestaurantController extends Controller
             'subscription_plan' => 'nullable|in:MONTHLY,QUARTERLY,SEMIANNUAL,YEARLY',
             'subscription_amount' => 'nullable|numeric|min:0',
             'subscription_paid' => 'nullable|boolean',
+            'subscription_paid_amount' => 'nullable|numeric|min:0',
+            'subscription_starts_at' => 'nullable|date',
             'grace_period_days' => 'nullable|integer|min:0|max:365',
             'payment_method' => 'nullable|in:CASH,BANK_TRANSFER,VODAFONE_CASH,INSTAPAY',
             'status' => 'nullable|in:ACTIVE,INACTIVE,PENDING',
@@ -103,6 +107,9 @@ class RestaurantController extends Controller
             'commission_rate.min' => 'نسبة العمولة لا يمكن أن تكون سالبة.',
             'commission_rate.max' => 'نسبة العمولة لا تتجاوز 100.',
             'subscription_plan.in' => 'نوع الاشتراك غير صالح.',
+            'subscription_paid_amount.numeric' => 'المبلغ المدفوع لازم يكون رقم.',
+            'subscription_paid_amount.min' => 'المبلغ المدفوع لا يمكن أن يكون سالباً.',
+            'subscription_starts_at.date' => 'تاريخ بداية الاشتراك غير صالح.',
             'grace_period_days.integer' => 'مدة السماح لازم تكون عدد أيام.',
             'grace_period_days.min' => 'مدة السماح لا يمكن أن تكون سالبة.',
             'grace_period_days.max' => 'مدة السماح لا تتجاوز 365 يوماً.',
@@ -111,12 +118,17 @@ class RestaurantController extends Controller
 
         $subscriptionPaid = $request->boolean('subscription_paid');
         $subscriptionAmount = round((float) ($validated['subscription_amount'] ?? 0), 2);
+        $hasExplicitPaidAmount = array_key_exists('subscription_paid_amount', $validated)
+            && $validated['subscription_paid_amount'] !== null;
+        $subscriptionPaidAmount = $hasExplicitPaidAmount
+            ? round((float) $validated['subscription_paid_amount'], 2)
+            : ($subscriptionPaid ? $subscriptionAmount : 0.0);
         $subscriptionPlan = $validated['subscription_plan'] ?? 'MONTHLY';
         $graceDays = array_key_exists('grace_period_days', $validated) && $validated['grace_period_days'] !== null
             ? (int) $validated['grace_period_days']
             : 7;
         $billingModel = $validated['billing_model'] ?? (
-            ($subscriptionPaid || $subscriptionAmount > 0) ? 'subscription' : 'percentage'
+            ($subscriptionPaid || $subscriptionPaidAmount > 0 || $subscriptionAmount > 0) ? 'subscription' : 'percentage'
         );
 
         if ($billingModel === 'percentage') {
@@ -128,26 +140,35 @@ class RestaurantController extends Controller
 
             $subscriptionPaid = false;
             $subscriptionAmount = 0.0;
-        } elseif ($subscriptionAmount <= 0 && ! $subscriptionPaid) {
+            $subscriptionPaidAmount = 0.0;
+        } elseif ($subscriptionAmount <= 0 && ! $subscriptionPaid && $subscriptionPaidAmount <= 0) {
             throw ValidationException::withMessages([
                 'subscription_amount' => 'أدخل قيمة الاشتراك.',
             ]);
         }
 
-        if ($subscriptionPaid && $subscriptionAmount <= 0) {
+        if (($subscriptionPaid || $subscriptionPaidAmount > 0) && $subscriptionAmount <= 0) {
             throw ValidationException::withMessages([
                 'subscription_amount' => 'أدخل قيمة الاشتراك قبل تحديد أنه تم الدفع.',
             ]);
         }
 
-        if ($subscriptionPaid && empty($validated['payment_method'])) {
+        if ($subscriptionPaidAmount > $subscriptionAmount) {
+            throw ValidationException::withMessages([
+                'subscription_paid_amount' => 'المبلغ المدفوع لا يمكن أن يتجاوز قيمة الاشتراك.',
+            ]);
+        }
+
+        if ($subscriptionPaidAmount > 0 && empty($validated['payment_method'])) {
             throw ValidationException::withMessages([
                 'payment_method' => 'اختر طريقة دفع الاشتراك.',
             ]);
         }
 
         [$subscriptionMonths, $subscriptionLabel] = $this->subscriptionPlanDefinition($subscriptionPlan);
-        $subscriptionStartsAt = now()->startOfDay();
+        $subscriptionStartsAt = filled($validated['subscription_starts_at'] ?? null)
+            ? Carbon::parse($validated['subscription_starts_at'])->startOfDay()
+            : now()->startOfDay();
         $subscriptionEndsAt = $subscriptionAmount > 0
             ? $subscriptionStartsAt->copy()->addMonths($subscriptionMonths)
             : null;
@@ -158,7 +179,7 @@ class RestaurantController extends Controller
         $isPlatformDelivery = $deliveryProvider === 'PLATFORM';
         $isPickupOnly = $deliveryProvider === 'PICKUP';
 
-        $restaurant = DB::transaction(function () use ($validated, $platformDefaultFee, $deliveryProvider, $isPlatformDelivery, $isPickupOnly, $billingModel, $subscriptionAmount, $subscriptionPlan, $graceDays, $subscriptionStartsAt, $subscriptionEndsAt, $paymentDueDate, $subscriptionPaid, $subscriptionLabel) {
+        $restaurant = DB::transaction(function () use ($validated, $platformDefaultFee, $deliveryProvider, $isPlatformDelivery, $isPickupOnly, $billingModel, $subscriptionAmount, $subscriptionPaidAmount, $subscriptionPlan, $graceDays, $subscriptionStartsAt, $subscriptionEndsAt, $paymentDueDate, $subscriptionLabel) {
             $restaurant = Restaurant::create([
                 'name' => $validated['name'],
                 'slug' => Str::slug($validated['name']).'-'.Str::lower(Str::random(4)),
@@ -222,8 +243,9 @@ class RestaurantController extends Controller
                 $this->recordOpeningSubscription(
                     $restaurant,
                     $subscriptionAmount,
+                    $subscriptionPaidAmount,
                     $subscriptionLabel,
-                    $subscriptionPaid,
+                    $subscriptionStartsAt->toDateString(),
                     $paymentDueDate->toDateString(),
                     $validated['payment_method'] ?? null,
                 );
@@ -235,8 +257,10 @@ class RestaurantController extends Controller
         ActivityLog::log('RESTAURANT_CREATED', 'Restaurant', $restaurant->id, null, ['name' => $restaurant->name]);
 
         $message = "تم إنشاء المطعم \"{$restaurant->name}\" وحساب المالك بنجاح.";
-        if ($subscriptionAmount > 0 && $subscriptionPaid) {
+        if ($subscriptionAmount > 0 && $subscriptionPaidAmount >= $subscriptionAmount) {
             $message .= ' وتم تسجيل الاشتراك المدفوع في الأرباح والتحصيل.';
+        } elseif ($subscriptionAmount > 0 && $subscriptionPaidAmount > 0) {
+            $message .= ' وتم تسجيل المبلغ المدفوع، والمتبقي على الاشتراك لسه مستحق.';
         }
 
         return redirect()->route('admin.restaurants.index')
@@ -427,8 +451,7 @@ class RestaurantController extends Controller
             && array_key_exists('grace_period_days', $validated)
             && $validated['grace_period_days'] !== null
         ) {
-            $validated['payment_due_date'] = $restaurant->subscription_ends_at
-                ->copy()
+            $validated['payment_due_date'] = Carbon::parse($restaurant->subscription_ends_at)
                 ->addDays((int) $validated['grace_period_days'])
                 ->toDateString();
         }
@@ -558,25 +581,36 @@ class RestaurantController extends Controller
     private function recordOpeningSubscription(
         Restaurant $restaurant,
         float $amount,
+        float $paidAmount,
         string $planLabel,
-        bool $paid,
+        string $issueDate,
         string $dueDate,
         ?string $paymentMethod,
     ): void {
+        $paidAmount = round($paidAmount, 2);
+        $status = match (true) {
+            $paidAmount >= $amount && $amount > 0 => 'PAID',
+            $paidAmount > 0 => 'PARTIALLY_PAID',
+            default => 'ISSUED',
+        };
+        $notes = match ($status) {
+            'PAID' => "اشتراك {$planLabel} تم تحصيله عند إنشاء المطعم",
+            'PARTIALLY_PAID' => "اشتراك {$planLabel} تم تحصيل جزء منه عند إنشاء المطعم",
+            default => "اشتراك {$planLabel} بانتظار التحصيل",
+        };
+
         $invoice = Invoice::create([
             'invoice_number' => 'INV-'.date('Ymd').'-'.str_pad((string) (Invoice::count() + 1), 4, '0', STR_PAD_LEFT),
             'restaurant_id' => $restaurant->id,
-            'issue_date' => now()->toDateString(),
+            'issue_date' => $issueDate,
             'due_date' => $dueDate,
             'subtotal' => $amount,
             'tax_amount' => 0,
             'total_amount' => $amount,
-            'paid_amount' => $paid ? $amount : 0,
-            'status' => $paid ? 'PAID' : 'ISSUED',
+            'paid_amount' => $paidAmount,
+            'status' => $status,
             'invoice_type' => 'SUBSCRIPTION',
-            'notes' => $paid
-                ? "اشتراك {$planLabel} تم تحصيله عند إنشاء المطعم"
-                : "اشتراك {$planLabel} بانتظار التحصيل",
+            'notes' => $notes,
         ]);
 
         $invoice->items()->create([
@@ -584,18 +618,20 @@ class RestaurantController extends Controller
             'amount' => $amount,
         ]);
 
-        if (! $paid) {
+        if ($paidAmount <= 0) {
             return;
         }
 
         Collection::create([
             'restaurant_id' => $restaurant->id,
             'invoice_id' => $invoice->id,
-            'amount' => $amount,
+            'amount' => $paidAmount,
             'payment_method' => $paymentMethod ?? 'CASH',
-            'collection_date' => now()->toDateString(),
-            'notes' => "تحصيل اشتراك {$planLabel} عند إضافة المطعم",
-            'collected_by_user_id' => auth()->id(),
+            'collection_date' => $issueDate,
+            'notes' => $status === 'PAID'
+                ? "تحصيل اشتراك {$planLabel} عند إضافة المطعم"
+                : "تحصيل جزئي لاشتراك {$planLabel} عند إضافة المطعم",
+            'collected_by_user_id' => Auth::id(),
         ]);
     }
 }

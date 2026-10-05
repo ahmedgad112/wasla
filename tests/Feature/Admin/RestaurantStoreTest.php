@@ -277,6 +277,73 @@ class RestaurantStoreTest extends TestCase
         $this->assertDatabaseMissing('restaurants', ['name' => 'مطعم بدون نسبة']);
     }
 
+    public function test_subscription_uses_the_chosen_start_date_and_partial_payment(): void
+    {
+        Carbon::setTestNow('2026-10-06 12:00:00');
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)->post('/admin/restaurants', $this->restaurantPayload([
+            'name' => 'مطعم اشتراك جزئي',
+            'phone' => '01000000051',
+            'owner_email' => 'partial-sub-owner@example.com',
+            'billing_model' => 'subscription',
+            'subscription_plan' => 'SEMIANNUAL',
+            'subscription_starts_at' => '2026-09-01',
+            'subscription_amount' => 1000,
+            'subscription_paid_amount' => 400,
+            'grace_period_days' => 7,
+            'payment_method' => 'INSTAPAY',
+        ]))->assertRedirect(route('admin.restaurants.index'));
+
+        $restaurant = Restaurant::where('name', 'مطعم اشتراك جزئي')->first();
+        $this->assertNotNull($restaurant);
+        $this->assertSame('2026-09-01', $restaurant->subscription_starts_at->toDateString());
+        $this->assertSame('2027-03-01', $restaurant->subscription_ends_at->toDateString());
+        $this->assertSame('2027-03-08', $restaurant->payment_due_date->toDateString());
+        $this->assertSame('1000.00', $restaurant->monthly_subscription_fee);
+
+        $invoice = Invoice::where('restaurant_id', $restaurant->id)->first();
+        $this->assertNotNull($invoice);
+        $this->assertSame('SUBSCRIPTION', $invoice->invoice_type);
+        $this->assertSame('PARTIALLY_PAID', $invoice->status);
+        $this->assertSame('2026-09-01', $invoice->issue_date->toDateString());
+        $this->assertSame('1000.00', $invoice->total_amount);
+        $this->assertSame('400.00', $invoice->paid_amount);
+
+        $collection = $invoice->collections()->first();
+        $this->assertNotNull($collection);
+        $this->assertSame('400.00', $collection->amount);
+        $this->assertSame('INSTAPAY', $collection->payment_method);
+        $this->assertSame('2026-09-01', $collection->collection_date->toDateString());
+
+        $summary = app(FinancialService::class)->getPlatformSummary('2026-10-01', '2026-10-31');
+        $this->assertSame(600.0, $summary['outstanding_receivables']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_paid_amount_cannot_exceed_the_subscription_value(): void
+    {
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)
+            ->from('/admin/restaurants/create')
+            ->post('/admin/restaurants', $this->restaurantPayload([
+                'name' => 'مطعم دفع زايد',
+                'phone' => '01000000052',
+                'owner_email' => 'overpay-owner@example.com',
+                'billing_model' => 'subscription',
+                'subscription_starts_at' => '2026-10-01',
+                'subscription_amount' => 500,
+                'subscription_paid_amount' => 700,
+                'payment_method' => 'CASH',
+            ]))
+            ->assertRedirect('/admin/restaurants/create')
+            ->assertSessionHasErrors('subscription_paid_amount');
+
+        $this->assertDatabaseMissing('restaurants', ['name' => 'مطعم دفع زايد']);
+    }
+
     public function test_marking_subscription_paid_requires_an_amount(): void
     {
         $admin = $this->adminUser();

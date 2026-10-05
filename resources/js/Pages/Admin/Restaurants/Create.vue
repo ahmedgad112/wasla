@@ -18,6 +18,24 @@ const paymentMethods = [
     { value: 'INSTAPAY', label: 'إنستاباي' },
 ];
 
+const todayInputDate = (): string => {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `${today.getFullYear()}-${month}-${day}`;
+};
+
+const parseInputDate = (value: string): Date => {
+    const [year, month, day] = value.split('-').map(Number);
+
+    if (!year || !month || !day) {
+        return new Date();
+    }
+
+    return new Date(year, month - 1, day);
+};
+
 const form = useForm({
     name: '',
     description: '',
@@ -34,26 +52,34 @@ const form = useForm({
     owner_email: '',
     owner_password: '',
     subscription_plan: 'MONTHLY' as SubscriptionPlan,
+    subscription_starts_at: todayInputDate(),
     subscription_amount: 0,
-    subscription_paid: false,
+    subscription_paid_amount: 0,
     grace_period_days: 7,
     payment_method: 'CASH',
 });
 
 const coveragePreview = computed(() => {
     const plan = subscriptionPlans.find((item) => item.value === form.subscription_plan);
-    const start = new Date();
+    const start = parseInputDate(form.subscription_starts_at);
     const end = new Date(start);
     end.setMonth(end.getMonth() + (plan?.months ?? 1));
     const due = new Date(end);
     due.setDate(due.getDate() + (Number(form.grace_period_days) || 0));
     const formatDate = (date: Date): string =>
         date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+    const fullAmount = Number(form.subscription_amount) || 0;
+    const paidAmount = Math.max(Number(form.subscription_paid_amount) || 0, 0);
 
     return {
         label: plan?.label ?? 'شهري',
+        start: formatDate(start),
         end: formatDate(end),
         due: formatDate(due),
+        fullAmount,
+        paidAmount,
+        remaining: Math.max(fullAmount - paidAmount, 0),
+        exceedsAmount: fullAmount > 0 && paidAmount > fullAmount,
     };
 });
 
@@ -341,7 +367,7 @@ const handleSubmit = (): void => {
                 <div v-else class="mt-6 border-t border-stone-100 pt-5">
                     <h3 class="text-sm font-black text-stone-800">اشتراك المطعم</h3>
                     <p class="mt-1 text-xs text-stone-500">
-                        اختَر مدة الاشتراك، ولو تم الدفع يتسجل المبلغ في الأرباح والتحصيل. مدة السماح بتتحسب بعد نهاية المدة وقبل إيقاف الحساب. مفيش نسبة على الطلبات.
+                        اختَر تاريخ بداية الاشتراك، واكتب قيمته كاملة والمبلغ اللي اتدفع فعليًا. لو الدفع جزئي، المتبقي يتسجل فاتورة مستحقة. مدة السماح بتتحسب بعد نهاية المدة وقبل إيقاف الحساب. مفيش نسبة على الطلبات.
                     </p>
 
                     <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -364,7 +390,18 @@ const handleSubmit = (): void => {
 
                     <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <label class="mb-1 block text-sm font-bold text-stone-600">قيمة الاشتراك (ج.م)</label>
+                            <label class="mb-1 block text-sm font-bold text-stone-600">تاريخ بداية الاشتراك</label>
+                            <input
+                                v-model="form.subscription_starts_at"
+                                type="date"
+                                required
+                                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none"
+                            />
+                            <p class="mt-1 text-xs text-stone-500">مدة الاشتراك بتتحسب من اليوم ده.</p>
+                            <p v-if="form.errors.subscription_starts_at" class="mt-1 text-xs text-red-500">{{ form.errors.subscription_starts_at }}</p>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-bold text-stone-600">قيمة الاشتراك كاملة (ج.م)</label>
                             <input
                                 v-model.number="form.subscription_amount"
                                 type="number"
@@ -373,6 +410,19 @@ const handleSubmit = (): void => {
                                 class="w-full rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none"
                             />
                             <p v-if="form.errors.subscription_amount" class="mt-1 text-xs text-red-500">{{ form.errors.subscription_amount }}</p>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-bold text-stone-600">المبلغ المدفوع (ج.م)</label>
+                            <input
+                                v-model.number="form.subscription_paid_amount"
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none"
+                            />
+                            <p class="mt-1 text-xs text-stone-500">اكتب اللي اتدفع فعليًا. لو لسه مدفعش، سيبه صفر.</p>
+                            <p v-if="coveragePreview.exceedsAmount" class="mt-1 text-xs text-red-500">المبلغ المدفوع أكبر من قيمة الاشتراك.</p>
+                            <p v-if="form.errors.subscription_paid_amount" class="mt-1 text-xs text-red-500">{{ form.errors.subscription_paid_amount }}</p>
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-bold text-stone-600">مدة السماح بعد انتهاء الاشتراك (أيام)</label>
@@ -388,17 +438,7 @@ const handleSubmit = (): void => {
                         </div>
                     </div>
 
-                    <label class="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                        <input v-model="form.subscription_paid" type="checkbox" class="mt-1 h-4 w-4 accent-amber-500" />
-                        <span>
-                            <span class="block text-sm font-black text-stone-800">تم دفع الاشتراك</span>
-                            <span class="mt-1 block text-xs text-stone-500">
-                                المبلغ يتسجل فاتورة مدفوعة وسند تحصيل، ويظهر في الأرباح والتدفقات.
-                            </span>
-                        </span>
-                    </label>
-
-                    <div v-if="form.subscription_paid" class="mt-4 max-w-xs">
+                    <div v-if="Number(form.subscription_paid_amount) > 0" class="mt-4 max-w-xs">
                         <label class="mb-1 block text-sm font-bold text-stone-600">طريقة الدفع</label>
                         <select
                             v-model="form.payment_method"
@@ -415,9 +455,11 @@ const handleSubmit = (): void => {
                         v-if="Number(form.subscription_amount) > 0"
                         class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900"
                     >
-                        اشتراك {{ coveragePreview.label }} ينتهي في {{ coveragePreview.end }}.
+                        اشتراك {{ coveragePreview.label }} من {{ coveragePreview.start }} وينتهي في {{ coveragePreview.end }}.
                         الحساب يفضل شغال مدة السماح، والإيقاف يبدأ بعد {{ coveragePreview.due }}.
-                        <template v-if="form.subscription_paid"> المبلغ هيتحسب ضمن أرباح المنصة والتحصيل من تاريخ الإنشاء.</template>
+                        <template v-if="coveragePreview.exceedsAmount"> المبلغ المدفوع لازم يكون أقل من أو يساوي قيمة الاشتراك.</template>
+                        <template v-else-if="coveragePreview.paidAmount > 0 && coveragePreview.remaining <= 0"> المبلغ كامل هيتسجل ضمن أرباح المنصة والتحصيل.</template>
+                        <template v-else-if="coveragePreview.paidAmount > 0"> هيتسجل تحصيل {{ coveragePreview.paidAmount }} ج.م، والمتبقي {{ coveragePreview.remaining }} ج.م فاتورة مستحقة.</template>
                         <template v-else> الاشتراك هيتسجل فاتورة غير محصّلة، ومش هيتحسب ربح لحد ما يتم الدفع.</template>
                     </p>
                 </div>
