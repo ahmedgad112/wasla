@@ -114,7 +114,9 @@ class FinanceController extends Controller
             ->limit(20)
             ->get();
         $collections = $restaurant->collections()
+            ->with('invoice:id,invoice_number')
             ->latest('collection_date')
+            ->latest('id')
             ->limit(15)
             ->get();
 
@@ -152,6 +154,7 @@ class FinanceController extends Controller
                 'payment_method' => $collection->payment_method,
                 'collection_date' => $collection->collection_date?->toDateString(),
                 'notes' => $collection->notes,
+                'invoice_number' => $collection->invoice?->invoice_number,
             ])->values(),
             'dues' => [
                 'subscription' => round((float) $unpaid->where('invoice_type', 'SUBSCRIPTION')->sum(fn (Invoice $invoice) => $invoice->total_amount - $invoice->paid_amount), 2),
@@ -173,6 +176,7 @@ class FinanceController extends Controller
             'billing_model' => 'required|in:subscription,percentage',
             'price_mode' => 'required_if:billing_model,subscription|nullable|in:same,custom',
             'amount' => 'nullable|numeric|min:0.01',
+            'collected_amount' => 'nullable|numeric|min:0.01',
             'commission_rate' => 'required_if:billing_model,percentage|nullable|numeric|min:0|max:100',
             'payment_method' => 'required_if:billing_model,subscription|nullable|in:CASH,BANK_TRANSFER,VODAFONE_CASH,INSTAPAY',
         ], [
@@ -181,6 +185,8 @@ class FinanceController extends Controller
             'price_mode.in' => 'اختيار السعر غير صالح.',
             'amount.numeric' => 'سعر الاشتراك لازم يكون رقم.',
             'amount.min' => 'سعر الاشتراك لازم يكون أكبر من صفر.',
+            'collected_amount.numeric' => 'المبلغ المحصّل لازم يكون رقم.',
+            'collected_amount.min' => 'المبلغ المحصّل لازم يكون أكبر من صفر.',
             'commission_rate.required_if' => 'حدد نسبة العمولة من كل طلب.',
             'commission_rate.numeric' => 'نسبة العمولة لازم تكون رقم.',
             'commission_rate.min' => 'نسبة العمولة لا يمكن أن تكون سالبة.',
@@ -205,10 +211,27 @@ class FinanceController extends Controller
             ]);
         }
 
+        if (! array_key_exists('collected_amount', $validated)) {
+            $collected = $amount;
+        } elseif ($validated['collected_amount'] === null) {
+            throw ValidationException::withMessages([
+                'collected_amount' => 'أدخل المبلغ المحصّل من الفاتورة.',
+            ]);
+        } else {
+            $collected = round((float) $validated['collected_amount'], 2);
+        }
+
+        if ($collected > $amount) {
+            throw ValidationException::withMessages([
+                'collected_amount' => 'المبلغ المحصّل لا يمكن أن يتجاوز قيمة الفاتورة ('.$amount.' ج.م).',
+            ]);
+        }
+
         $window = $this->nextSubscriptionWindow($restaurant);
         $planLabel = $this->subscriptionPlanLabel($window['billing_cycle']);
+        $isPaidInFull = $collected >= $amount;
 
-        DB::transaction(function () use ($restaurant, $amount, $validated, $window, $planLabel): void {
+        DB::transaction(function () use ($restaurant, $amount, $collected, $isPaidInFull, $validated, $window, $planLabel): void {
             $restaurant->update([
                 'commission_type' => 'SUBSCRIPTION',
                 'commission_percentage' => 0,
@@ -228,8 +251,8 @@ class FinanceController extends Controller
                 'subtotal' => $amount,
                 'tax_amount' => 0,
                 'total_amount' => $amount,
-                'paid_amount' => $amount,
-                'status' => 'PAID',
+                'paid_amount' => $collected,
+                'status' => $isPaidInFull ? 'PAID' : 'PARTIALLY_PAID',
                 'invoice_type' => 'SUBSCRIPTION',
                 'notes' => "تجديد اشتراك {$planLabel}",
             ]);
@@ -242,25 +265,125 @@ class FinanceController extends Controller
             Collection::create([
                 'restaurant_id' => $restaurant->id,
                 'invoice_id' => $invoice->id,
-                'amount' => $amount,
+                'amount' => $collected,
                 'payment_method' => $validated['payment_method'],
                 'collection_date' => now()->toDateString(),
-                'notes' => "تحصيل تجديد اشتراك {$planLabel}",
+                'notes' => $isPaidInFull
+                    ? "تحصيل تجديد اشتراك {$planLabel}"
+                    : "تحصيل جزء من تجديد اشتراك {$planLabel}",
                 'collected_by_user_id' => auth()->id(),
             ]);
 
-            $this->reactivateIfBillingIsClear($restaurant);
+            if ($isPaidInFull) {
+                $this->reactivateIfBillingIsClear($restaurant);
+            }
         });
 
         ActivityLog::log('SUBSCRIPTION_RENEWED', 'Restaurant', $restaurant->id, null, [
             'amount' => $amount,
+            'collected_amount' => $collected,
             'price_mode' => $validated['price_mode'],
             'ends_at' => $window['ends_at'],
         ]);
 
+        $message = $isPaidInFull
+            ? "تم تجديد اشتراك {$restaurant->name} وتحصيل الفاتورة بالكامل ({$amount} ج.م)."
+            : "تم تجديد اشتراك {$restaurant->name}. اتحصّل {$collected} ج.م من فاتورة {$amount} ج.م، والمتبقي مستحق.";
+
         return redirect()
             ->route('admin.finance.restaurants.show', $restaurant->id)
-            ->with('success', "تم تجديد اشتراك {$restaurant->name} بمبلغ {$amount} ج.م وتسجيله في الأرباح والتحصيل.");
+            ->with('success', $message);
+    }
+
+    public function recordCollection(Request $request, int $id): RedirectResponse
+    {
+        $restaurant = Restaurant::query()->findOrFail($id);
+
+        $validated = $request->validate([
+            'invoice_id' => ['nullable', 'integer', 'exists:invoices,id'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'payment_method' => ['required', 'in:CASH,BANK_TRANSFER,VODAFONE_CASH,INSTAPAY'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'invoice_id.exists' => 'الفاتورة غير موجودة.',
+            'amount.required' => 'أدخل مبلغ التحصيل.',
+            'amount.numeric' => 'مبلغ التحصيل لازم يكون رقم.',
+            'amount.min' => 'مبلغ التحصيل لازم يكون أكبر من صفر.',
+            'payment_method.required' => 'اختر طريقة الدفع.',
+            'payment_method.in' => 'طريقة الدفع غير صالحة.',
+        ]);
+
+        $invoice = null;
+
+        if (! empty($validated['invoice_id'])) {
+            $invoice = Invoice::query()
+                ->whereKey($validated['invoice_id'])
+                ->where('restaurant_id', $restaurant->id)
+                ->first();
+
+            if (! $invoice || in_array($invoice->status, ['PAID', 'CANCELLED'], true)) {
+                throw ValidationException::withMessages([
+                    'invoice_id' => 'الفاتورة لا تتبع هذا المطعم أو تم سدادها.',
+                ]);
+            }
+        }
+
+        $amount = round((float) $validated['amount'], 2);
+        $remaining = $invoice
+            ? round((float) $invoice->total_amount - (float) $invoice->paid_amount, 2)
+            : null;
+
+        if ($invoice && $amount > $remaining) {
+            throw ValidationException::withMessages([
+                'amount' => 'المبلغ أكبر من المتبقي على الفاتورة ('.$remaining.' ج.م).',
+            ]);
+        }
+
+        DB::transaction(function () use ($restaurant, $invoice, $validated, $amount, $remaining): void {
+            Collection::create([
+                'restaurant_id' => $restaurant->id,
+                'invoice_id' => $invoice?->id,
+                'amount' => $amount,
+                'payment_method' => $validated['payment_method'],
+                'collection_date' => now()->toDateString(),
+                'notes' => ($validated['notes'] ?? null) ?: ($invoice
+                    ? "تحصيل فاتورة {$invoice->invoice_number}"
+                    : 'تحصيل بدون فاتورة'),
+                'collected_by_user_id' => auth()->id(),
+            ]);
+
+            if (! $invoice) {
+                return;
+            }
+
+            $isPaidInFull = $amount >= $remaining;
+            $invoice->update([
+                'paid_amount' => $isPaidInFull
+                    ? round((float) $invoice->total_amount, 2)
+                    : round((float) $invoice->paid_amount + $amount, 2),
+                'status' => $isPaidInFull ? 'PAID' : 'PARTIALLY_PAID',
+            ]);
+
+            if ($isPaidInFull) {
+                $this->reactivateIfBillingIsClear($restaurant);
+            }
+        });
+
+        ActivityLog::log('COLLECTION_RECORDED', 'Restaurant', $restaurant->id, null, [
+            'invoice_id' => $invoice?->id,
+            'amount' => $amount,
+            'payment_method' => $validated['payment_method'],
+        ]);
+
+        $message = $invoice === null
+            ? "تم تسجيل تحصيل {$amount} ج.م."
+            : ($amount >= $remaining
+                ? "تم تحصيل فاتورة {$invoice->invoice_number} بالكامل ({$amount} ج.م)."
+                : "تم تسجيل تحصيل {$amount} ج.م من فاتورة {$invoice->invoice_number}.");
+
+        return redirect()
+            ->route('admin.finance.restaurants.show', $restaurant->id)
+            ->with('success', $message);
     }
 
     private function switchRestaurantToPercentage(Restaurant $restaurant, float $commissionRate): RedirectResponse

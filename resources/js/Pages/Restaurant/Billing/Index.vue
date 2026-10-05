@@ -340,7 +340,7 @@ const dueDateLabel = computed(() => {
                 <p class="text-xs text-stone-400">لا توجد فواتير مسجلة لمطعمك حتى الآن.</p>
             </div>
             <div v-else class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
+                <table class="record-cards w-full text-right text-xs">
                     <thead>
                         <tr class="border-b border-stone-200 dark:border-stone-800 text-stone-400 text-[11px] font-bold">
                             <th class="py-3 px-4">رقم الفاتورة</th>
@@ -358,22 +358,22 @@ const dueDateLabel = computed(() => {
                             :key="inv.id"
                             class="hover:bg-stone-50 dark:hover:bg-stone-800/50"
                         >
-                            <td class="py-4 px-4 font-mono font-bold text-orange-600">
+                            <td data-label="رقم الفاتورة" class="is-title py-4 px-4 font-mono font-bold text-orange-600">
                                 {{ inv.invoice_number }}
                             </td>
-                            <td class="py-4 px-4 text-stone-500 font-mono">
+                            <td data-label="تاريخ الإصدار" class="py-4 px-4 text-stone-500 font-mono">
                                 {{ inv.issue_date ? inv.issue_date.split('T')[0] : '—' }}
                             </td>
-                            <td class="py-4 px-4 font-bold text-stone-700 dark:text-stone-300">
+                            <td data-label="النوع" class="py-4 px-4 font-bold text-stone-700 dark:text-stone-300">
                                 {{ inv.invoice_type === 'SUBSCRIPTION' ? 'اشتراك شهري' : 'عمولة مبيعات' }}
                             </td>
-                            <td class="py-4 px-4 font-black text-stone-900 dark:text-white">
+                            <td data-label="المبلغ المستحق" class="py-4 px-4 font-black text-stone-900 dark:text-white">
                                 {{ Number(inv.total_amount).toLocaleString() }} ج.م
                             </td>
-                            <td class="py-4 px-4 font-mono text-stone-500">
+                            <td data-label="تاريخ الاستحقاق" class="py-4 px-4 font-mono text-stone-500">
                                 {{ inv.due_date ? inv.due_date.split('T')[0] : '—' }}
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="حالة السداد" class="py-4 px-4">
                                 <span
                                     :class="[
                                         'px-2.5 py-1 rounded-full text-[10px] font-black inline-flex items-center gap-1',
@@ -393,7 +393,7 @@ const dueDateLabel = computed(() => {
                                     }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4 text-stone-400 text-[11px] max-w-xs truncate">
+                            <td data-label="ملاحظات" class="py-4 px-4 text-stone-400 text-[11px] max-w-xs truncate">
                                 {{ inv.notes || '—' }}
                             </td>
                         </tr>

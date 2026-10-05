@@ -151,7 +151,7 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
 
         <div class="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-xs">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="record-cards w-full text-sm">
                     <thead class="border-b border-stone-200">
                         <tr class="text-stone-400">
                             <th class="text-right px-6 py-4 font-medium">المطعم</th>
@@ -168,7 +168,7 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
                             :key="col.id"
                             class="hover:bg-white transition-colors"
                         >
-                            <td class="px-6 py-4">
+                            <td data-label="المطعم" class="is-title px-6 py-4">
                                 <Link
                                     :href="`/admin/restaurants/${col.restaurant.id}`"
                                     class="text-stone-900 hover:text-orange-400 transition-colors font-medium"
@@ -176,8 +176,8 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
                                     {{ col.restaurant.name }}
                                 </Link>
                             </td>
-                            <td class="px-6 py-4 text-emerald-400 font-semibold">{{ fmt(col.amount) }} ج</td>
-                            <td class="px-6 py-4">
+                            <td data-label="المبلغ" class="px-6 py-4 text-emerald-400 font-semibold">{{ fmt(col.amount) }} ج</td>
+                            <td data-label="الحالة" class="px-6 py-4">
                                 <span
                                     :class="[
                                         'px-2 py-1 rounded-full text-xs font-semibold border',
@@ -187,16 +187,16 @@ const formatDate = (date: string): string => new Date(date).toLocaleDateString('
                                     {{ statusOf(col.status).label }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-stone-400">
+                            <td data-label="تاريخ التحصيل" class="px-6 py-4 text-stone-400">
                                 {{ col.collected_at ? formatDate(col.collected_at) : '—' }}
                             </td>
-                            <td class="px-6 py-4">
+                            <td data-label="الفاتورة" class="px-6 py-4">
                                 <span v-if="col.invoice" class="text-indigo-400 text-xs">
                                     {{ col.invoice.invoice_number }}
                                 </span>
                                 <span v-else class="text-stone-500 text-xs">—</span>
                             </td>
-                            <td class="px-6 py-4 text-stone-400 text-xs">{{ col.collectedBy?.name ?? '—' }}</td>
+                            <td data-label="بواسطة" class="px-6 py-4 text-stone-400 text-xs">{{ col.collectedBy?.name ?? '—' }}</td>
                         </tr>
                     </tbody>
                 </table>

@@ -8,6 +8,7 @@ import FoodCard from '../../Components/FoodCard.vue';
 import { availabilityMeta } from '../../lib/restaurantAvailability';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAvailabilityStore } from '../../Stores/availabilityStore';
+import { useUserLocation } from '../../composables/useUserLocation';
 import {
     MapPin,
     GraduationCap,
@@ -47,6 +48,7 @@ const pendingItemToAdd = ref<{
 
 const cart = useCartStore();
 const availabilityStore = useAvailabilityStore();
+const { distanceFromUserKm, formatDistanceKm } = useUserLocation();
 const categoryTabsEl = ref<HTMLElement | null>(null);
 const isProgrammaticScroll = ref(false);
 let sectionObserver: IntersectionObserver | null = null;
@@ -69,6 +71,14 @@ const categoriesWithItems = computed(() =>
 );
 
 const offers = computed((): Offer[] => liveRestaurant.value.offers ?? []);
+const distanceLabel = computed(() => {
+    const kilometers = distanceFromUserKm(liveRestaurant.value.latitude, liveRestaurant.value.longitude);
+    if (kilometers === null) {
+        return null;
+    }
+
+    return formatDistanceKm(kilometers);
+});
 
 const query = computed(() => searchQuery.value.trim().toLowerCase());
 
@@ -374,6 +384,13 @@ onBeforeUnmount(() => {
                         <Bike class="h-3.5 w-3.5 text-orange-500" />
                         {{ feeLabel }}
                     </span>
+                    <template v-if="distanceLabel">
+                        <span class="text-stone-300">•</span>
+                        <span class="inline-flex items-center gap-1 text-orange-600">
+                            <MapPin class="h-3.5 w-3.5 shrink-0" />
+                            يبعد {{ distanceLabel }}
+                        </span>
+                    </template>
                     <template v-if="liveRestaurant.address">
                         <span class="text-stone-300">•</span>
                         <span class="inline-flex max-w-[180px] items-center gap-1 truncate">

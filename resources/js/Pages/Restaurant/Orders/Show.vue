@@ -219,7 +219,7 @@ const statusBadge = (status: string) => statusMap[status] || { label: status, bg
                         >
                             <option value="">-- اختر كابتن متاح --</option>
                             <option v-for="d in available_drivers" :key="d.id" :value="d.id">
-                                {{ d.name }} ({{ d.phone }})
+                                {{ d.name }} — {{ d.restaurant_id ? 'المطعم' : 'الموقع' }} ({{ d.phone }})
                             </option>
                         </select>
                         <button

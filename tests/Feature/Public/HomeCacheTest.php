@@ -20,6 +20,8 @@ class HomeCacheTest extends TestCase
             'slug' => 'speed-restaurant',
             'phone' => '01001112233',
             'address' => 'برج العرب',
+            'latitude' => 30.8756,
+            'longitude' => 29.5842,
             'status' => 'ACTIVE',
             'availability_status' => 'OPEN',
             'opening_time' => '08:00:00',
@@ -37,7 +39,10 @@ class HomeCacheTest extends TestCase
     {
         $this->seedRestaurant();
 
-        $this->get('/')->assertOk();
+        $this->get('/')->assertOk()->assertInertia(fn ($page) => $page
+            ->where('restaurants.0.latitude', 30.8756)
+            ->where('restaurants.0.longitude', 29.5842)
+        );
         $this->assertTrue(Cache::has(PublicCatalogCache::FEATURED_RESTAURANTS));
 
         DB::enableQueryLog();

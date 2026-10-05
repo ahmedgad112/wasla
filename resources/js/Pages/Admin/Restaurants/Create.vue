@@ -4,6 +4,13 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, Save, Store, DollarSign, User, Bike } from '@lucide/vue';
 import { subscriptionPlans, type SubscriptionPlan } from '../../../lib/subscriptionPlans';
 
+const props = defineProps<{
+    defaults?: {
+        commission_rate?: number;
+        delivery_fee?: number;
+    };
+}>();
+
 const paymentMethods = [
     { value: 'CASH', label: 'نقدي' },
     { value: 'BANK_TRANSFER', label: 'تحويل بنكي' },
@@ -18,10 +25,10 @@ const form = useForm({
     phone: '',
     email: '',
     billing_model: 'percentage' as 'subscription' | 'percentage',
-    commission_rate: 15,
+    commission_rate: props.defaults?.commission_rate ?? 15,
     delivery_provider: 'RESTAURANT' as 'PLATFORM' | 'RESTAURANT' | 'PICKUP',
-    delivery_fee: 10,
-    delivery_base_fee: 10,
+    delivery_fee: props.defaults?.delivery_fee ?? 10,
+    delivery_base_fee: props.defaults?.delivery_fee ?? 10,
     delivery_fee_per_km: 5,
     owner_name: '',
     owner_email: '',

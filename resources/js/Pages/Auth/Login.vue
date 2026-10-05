@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { LogIn, Mail, Lock } from '@lucide/vue';
+import type { SharedInertiaProps } from '../../Types';
+
+const page = usePage<SharedInertiaProps>();
+const allowRegistrations = computed(() => page.props.site?.allow_registrations !== false);
 
 const form = useForm({
     email: '',
@@ -101,7 +106,7 @@ const submit = (): void => {
                     </button>
                 </form>
 
-                <div class="text-center pt-4 border-t border-stone-100 dark:border-stone-800 text-xs text-stone-500 dark:text-stone-400">
+                <div v-if="allowRegistrations" class="text-center pt-4 border-t border-stone-100 dark:border-stone-800 text-xs text-stone-500 dark:text-stone-400">
                     <span>عميل جديد؟ </span>
                     <Link href="/register" class="text-orange-600 font-bold hover:underline">
                         أنشئ حسابك

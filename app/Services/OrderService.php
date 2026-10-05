@@ -279,11 +279,11 @@ class OrderService
     }
 
     /**
-     * Assign a delivery driver to an order (Driver must belong to the same restaurant).
+     * Assign a delivery driver. Restaurant drivers stay with their restaurant; platform drivers can serve any restaurant.
      */
     public function assignDriver(Order $order, DeliveryDriver $driver, ?int $userId = null): Order
     {
-        if ($order->restaurant_id !== $driver->restaurant_id) {
+        if ($driver->restaurant_id !== null && (int) $driver->restaurant_id !== (int) $order->restaurant_id) {
             throw ValidationException::withMessages([
                 'driver' => __('مندوب التوصيل لا ينتمي إلى نفس مطعم هذا الطلب.'),
             ]);

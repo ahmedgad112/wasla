@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,6 +43,19 @@ class DeliveryDriver extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function isPlatformDriver(): bool
+    {
+        return $this->restaurant_id === null;
+    }
+
+    public function scopeServingRestaurant(Builder $query, int $restaurantId): Builder
+    {
+        return $query->where(function (Builder $drivers) use ($restaurantId) {
+            $drivers->where('restaurant_id', $restaurantId)
+                ->orWhereNull('restaurant_id');
+        });
     }
 
     public function assignedOrders(): HasMany

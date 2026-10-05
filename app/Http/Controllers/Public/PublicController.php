@@ -37,7 +37,7 @@ class PublicController extends Controller
                 ->whereIn('status', ['ACTIVE', 'SUSPENDED'])
                 ->select([
                     'id', 'name', 'slug', 'logo', 'cover_image', 'description',
-                    'phone', 'address', 'delivery_fee', 'estimated_delivery_time',
+                    'phone', 'address', 'latitude', 'longitude', 'delivery_fee', 'estimated_delivery_time',
                     'minimum_order_amount', 'student_discount_percentage',
                     'opening_time', 'closing_time', 'status', 'availability_status',
                     'delivery_provider', 'delivery_enabled',
@@ -186,7 +186,7 @@ class PublicController extends Controller
             ->select([
                 'id', 'name', 'slug', 'logo', 'cover_image', 'description',
                 'delivery_fee', 'estimated_delivery_time', 'minimum_order_amount',
-                'opening_time', 'closing_time', 'address', 'status', 'availability_status',
+                'opening_time', 'closing_time', 'address', 'latitude', 'longitude', 'status', 'availability_status',
                 'student_discount_percentage', 'phone', 'delivery_provider', 'delivery_enabled',
             ])
             ->withCount(['offers' => fn ($q) => $q->where('is_active', true)])

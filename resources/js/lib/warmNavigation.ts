@@ -39,7 +39,6 @@ const hrefComponents: Record<string, string> = {
     '/admin/collections': 'Admin/Collections/Index',
     '/admin/billing': 'Admin/Billing/Hub',
     '/admin/analytics': 'Admin/Analytics/Index',
-    '/admin/cms': 'Admin/Cms/Index',
     '/admin/activity-logs': 'Admin/ActivityLogs/Index',
     '/admin/backups': 'Admin/Backups/Index',
     '/admin/roles': 'Admin/Roles/Index',

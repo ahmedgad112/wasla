@@ -4,6 +4,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import RestaurantCard from '../../Components/RestaurantCard.vue';
 import type { Restaurant, Offer, SharedInertiaProps } from '../../Types';
 import { useAvailabilityStore } from '../../Stores/availabilityStore';
+import { useUserLocation } from '../../composables/useUserLocation';
 import {
     Search,
     Percent,
@@ -50,9 +51,11 @@ const FILTERS = [
 
 const page = usePage<SharedInertiaProps>();
 const auth = computed(() => page.props.auth);
+const site = computed(() => page.props.site);
 const searchQuery = ref('');
 const filter = ref('all');
 const availabilityStore = useAvailabilityStore();
+const { place, sortByUserDistance } = useUserLocation();
 
 const restaurantList = computed(() => {
     if (Array.isArray(props.restaurants) && props.restaurants.length > 0) {
@@ -64,8 +67,8 @@ const restaurantList = computed(() => {
     return [];
 });
 
-const filteredRestaurants = computed(() =>
-    restaurantList.value.filter((restaurant) => {
+const filteredRestaurants = computed(() => {
+    const matched = restaurantList.value.filter((restaurant) => {
         const haystack = `${restaurant.name} ${restaurant.description || ''} ${restaurant.address || ''}`.toLowerCase();
         const matchesSearch = haystack.includes(searchQuery.value.toLowerCase());
         if (!matchesSearch) {
@@ -81,8 +84,10 @@ const filteredRestaurants = computed(() =>
             return ['OPEN', 'BUSY'].includes(availabilityStore.resolve(restaurant));
         }
         return true;
-    }),
-);
+    });
+
+    return place.value ? sortByUserDistance(matched) : matched;
+});
 
 const firstName = computed(() => auth.value?.user?.name?.split(' ')[0]);
 const hour = new Date().getHours();
@@ -90,21 +95,30 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
 </script>
 
 <template>
-        <Head title="اطلب من مطاعم الجامعة" />
+        <Head :title="site?.hero_title ?? 'اطلب من مطاعم الجامعة'" />
 
         <div class="space-y-5 pb-4">
             <section class="px-4 pt-4 sm:px-6 lg:px-8">
                 <p class="text-xs font-bold text-orange-600">{{ greeting }}{{ firstName ? `، ${firstName}` : '' }}</p>
                 <h1 class="mt-0.5 text-xl font-black text-stone-900 dark:text-white md:text-2xl">
-                    هتطلب إيه النهاردة؟
+                    {{ site?.hero_title ?? site?.home_headline ?? 'هتطلب إيه النهاردة؟' }}
                 </h1>
+                <p v-if="site?.hero_subtitle" class="mt-1 max-w-2xl text-sm text-stone-500">
+                    {{ site.hero_subtitle }}
+                </p>
+                <p
+                    v-if="site?.student_banner_title"
+                    class="mt-2 inline-flex rounded-full bg-orange-50 px-3 py-1 text-[11px] font-bold text-orange-700"
+                >
+                    {{ site.student_banner_title }}
+                </p>
 
                 <div class="relative mt-3 max-w-2xl">
                     <Search class="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                     <input
                         v-model="searchQuery"
                         type="search"
-                        placeholder="ابحث عن مطعم أو وجبة..."
+                        :placeholder="site?.search_placeholder ?? 'ابحث عن مطعم أو وجبة...'"
                         class="w-full rounded-2xl border-0 bg-white py-3 pr-10 pl-4 text-sm font-medium shadow-sm ring-1 ring-stone-100 placeholder:text-stone-400 focus:ring-2 focus:ring-orange-500 dark:bg-stone-900 dark:ring-stone-800"
                     />
                 </div>
@@ -127,11 +141,11 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                 </button>
             </section>
 
-            <section v-if="activeOffers.length > 0" class="px-4 sm:px-6 lg:px-8">
+            <section v-if="site?.show_offers_section !== false && activeOffers.length > 0" class="px-4 sm:px-6 lg:px-8">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h2 class="flex items-center gap-1.5 text-sm font-black text-stone-900 dark:text-white">
                         <Percent class="h-4 w-4 text-orange-500" />
-                        عروض النهاردة
+                        {{ site?.offers_section_title ?? 'عروض النهاردة' }}
                     </h2>
                     <Link href="/offers" prefetch class="shrink-0 text-[11px] font-bold text-orange-600">
                         الكل
@@ -162,12 +176,17 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                 </div>
             </section>
 
-            <section class="px-4 sm:px-6 lg:px-8">
+            <section v-if="site?.show_restaurants_section !== false" class="px-4 sm:px-6 lg:px-8">
                 <div class="mb-3 flex items-center justify-between gap-3">
-                    <h2 class="flex items-center gap-1.5 text-sm font-black text-stone-900 dark:text-white">
-                        <Store class="h-4 w-4 text-orange-500" />
-                        مطاعم قريبة منك
-                    </h2>
+                    <div>
+                        <h2 class="flex items-center gap-1.5 text-sm font-black text-stone-900 dark:text-white">
+                            <Store class="h-4 w-4 text-orange-500" />
+                            {{ site?.restaurants_section_title ?? 'مطاعم قريبة منك' }}
+                        </h2>
+                        <p v-if="place" class="mt-0.5 text-[11px] font-bold text-orange-600">
+                            مرتبة حسب قربها من {{ place.label }}
+                        </p>
+                    </div>
                     <Link href="/restaurants" prefetch class="shrink-0 text-[11px] font-bold text-orange-600">
                         عرض الكل
                     </Link>
@@ -187,7 +206,7 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                 </div>
             </section>
 
-            <section class="px-4 sm:px-6 lg:px-8">
+            <section v-if="site?.show_leaderboard_section !== false" class="px-4 sm:px-6 lg:px-8">
                 <Link
                     href="/leaderboard"
                     prefetch
@@ -199,7 +218,7 @@ const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء ال�
                             <Flame v-else class="h-5 w-5" />
                         </span>
                         <div>
-                            <p class="text-sm font-black">الأكثر طلباً</p>
+                            <p class="text-sm font-black">{{ site?.leaderboard_section_title ?? 'الأكثر طلباً' }}</p>
                             <p class="text-[11px] text-stone-300">
                                 {{
                                     leaderboard?.kingOfBreakfast

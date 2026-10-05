@@ -96,7 +96,7 @@ const sc = computed(() => statusMap[props.invoice.status] ?? statusMap.DRAFT);
             <hr class="border-stone-200" />
 
             <div>
-                <table class="w-full text-sm">
+                <table class="record-cards w-full text-sm">
                     <thead>
                         <tr class="text-stone-400 border-b border-stone-200">
                             <th class="text-right pb-3 font-medium">البند</th>
@@ -105,12 +105,12 @@ const sc = computed(() => statusMap[props.invoice.status] ?? statusMap.DRAFT);
                     </thead>
                     <tbody class="divide-y divide-white/5">
                         <tr>
-                            <td class="py-3 text-stone-200">عمولة المنصة عن الفترة</td>
-                            <td class="py-3 text-stone-900 font-medium">{{ fmt(invoice.subtotal_amount) }} ج</td>
+                            <td data-label="البند" class="is-title py-3 text-stone-200">عمولة المنصة عن الفترة</td>
+                            <td data-label="المبلغ" class="py-3 text-stone-900 font-medium">{{ fmt(invoice.subtotal_amount) }} ج</td>
                         </tr>
                         <tr>
-                            <td class="py-3 text-stone-200">ضريبة القيمة المضافة</td>
-                            <td class="py-3 text-stone-900 font-medium">{{ fmt(invoice.tax_amount) }} ج</td>
+                            <td data-label="البند" class="is-title py-3 text-stone-200">ضريبة القيمة المضافة</td>
+                            <td data-label="المبلغ" class="py-3 text-stone-900 font-medium">{{ fmt(invoice.tax_amount) }} ج</td>
                         </tr>
                     </tbody>
                 </table>

@@ -18,7 +18,8 @@ class OrderController extends Controller
     private function getRestaurantOrAbort()
     {
         $restaurant = auth()->user()->restaurant;
-        abort_if(!$restaurant, 403);
+        abort_if(! $restaurant, 403);
+
         return $restaurant;
     }
 
@@ -31,7 +32,7 @@ class OrderController extends Controller
             ->with([
                 'customer.user:id,name,phone',
                 'deliveryDriver:id,name,phone,availability_status',
-                'items.menuItem:id,name,image'
+                'items.menuItem:id,name,image',
             ])
             ->latest();
 
@@ -43,39 +44,41 @@ class OrderController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%")
-                  ->orWhereHas('customer.user', function ($cq) use ($search) {
-                      $cq->where('name', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%");
-                  });
+                    ->orWhere('address', 'like', "%{$search}%")
+                    ->orWhereHas('customer.user', function ($cq) use ($search) {
+                        $cq->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
             });
         }
 
         // Summary counts for tabs & KPIs
         $counts = [
-            'all'               => Order::where('restaurant_id', $rid)->count(),
-            'pending'           => Order::where('restaurant_id', $rid)->where('status', 'PENDING')->count(),
-            'confirmed'         => Order::where('restaurant_id', $rid)->where('status', 'CONFIRMED')->count(),
-            'preparing'         => Order::where('restaurant_id', $rid)->where('status', 'PREPARING')->count(),
-            'ready_for_pickup'  => Order::where('restaurant_id', $rid)->where('status', 'READY_FOR_PICKUP')->count(),
-            'out_for_delivery'  => Order::where('restaurant_id', $rid)->where('status', 'OUT_FOR_DELIVERY')->count(),
-            'delivered'         => Order::where('restaurant_id', $rid)->where('status', 'DELIVERED')->count(),
-            'cancelled'         => Order::where('restaurant_id', $rid)->whereIn('status', ['CANCELLED', 'REJECTED'])->count(),
-            'today_orders'      => Order::where('restaurant_id', $rid)->whereDate('created_at', today())->count(),
-            'today_revenue'     => (float) Order::where('restaurant_id', $rid)->where('status', 'DELIVERED')->whereDate('updated_at', today())->sum('total_amount'),
+            'all' => Order::where('restaurant_id', $rid)->count(),
+            'pending' => Order::where('restaurant_id', $rid)->where('status', 'PENDING')->count(),
+            'confirmed' => Order::where('restaurant_id', $rid)->where('status', 'CONFIRMED')->count(),
+            'preparing' => Order::where('restaurant_id', $rid)->where('status', 'PREPARING')->count(),
+            'ready_for_pickup' => Order::where('restaurant_id', $rid)->where('status', 'READY_FOR_PICKUP')->count(),
+            'out_for_delivery' => Order::where('restaurant_id', $rid)->where('status', 'OUT_FOR_DELIVERY')->count(),
+            'delivered' => Order::where('restaurant_id', $rid)->where('status', 'DELIVERED')->count(),
+            'cancelled' => Order::where('restaurant_id', $rid)->whereIn('status', ['CANCELLED', 'REJECTED'])->count(),
+            'today_orders' => Order::where('restaurant_id', $rid)->whereDate('created_at', today())->count(),
+            'today_revenue' => (float) Order::where('restaurant_id', $rid)->where('status', 'DELIVERED')->whereDate('updated_at', today())->sum('total_amount'),
         ];
 
-        $availableDrivers = DeliveryDriver::where('restaurant_id', $rid)
+        $availableDrivers = DeliveryDriver::query()
+            ->servingRestaurant($rid)
             ->where('is_active', true)
             ->where('availability_status', 'AVAILABLE')
-            ->get(['id', 'name', 'phone']);
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone', 'restaurant_id']);
 
         return Inertia::render('Restaurant/Orders/Index', [
-            'orders'            => $query->paginate(15)->withQueryString(),
-            'filters'           => $request->only(['status', 'search']),
-            'counts'            => $counts,
+            'orders' => $query->paginate(15)->withQueryString(),
+            'filters' => $request->only(['status', 'search']),
+            'counts' => $counts,
             'available_drivers' => $availableDrivers,
-            'restaurant'        => $restaurant,
+            'restaurant' => $restaurant,
         ]);
     }
 
@@ -88,14 +91,16 @@ class OrderController extends Controller
             ->with(['customer.user', 'items', 'deliveryDriver', 'statusHistories'])
             ->findOrFail($id);
 
-        $availableDrivers = DeliveryDriver::where('restaurant_id', $restaurant->id)
+        $availableDrivers = DeliveryDriver::query()
+            ->servingRestaurant($restaurant->id)
             ->where('is_active', true)
             ->where('availability_status', 'AVAILABLE')
+            ->orderBy('name')
             ->get();
 
         return Inertia::render('Restaurant/Orders/Show', [
-            'order'            => $order,
-            'available_drivers'=> $availableDrivers,
+            'order' => $order,
+            'available_drivers' => $availableDrivers,
         ]);
     }
 
@@ -107,7 +112,7 @@ class OrderController extends Controller
 
         $request->validate([
             'status' => 'required|string',
-            'notes'  => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
         $this->orderService->updateOrderStatus($order, $request->status, $request->notes, auth()->id());
@@ -123,7 +128,9 @@ class OrderController extends Controller
 
         $request->validate(['driver_id' => 'required|exists:delivery_drivers,id']);
 
-        $driver = DeliveryDriver::where('restaurant_id', $restaurant->id)->findOrFail($request->driver_id);
+        $driver = DeliveryDriver::query()
+            ->servingRestaurant($restaurant->id)
+            ->findOrFail($request->integer('driver_id'));
 
         $this->orderService->assignDriver($order, $driver, auth()->id());
 

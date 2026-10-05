@@ -464,7 +464,7 @@ const footerNet = computed(() =>
                 class="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm overflow-hidden"
             >
                 <div class="overflow-x-auto">
-                    <table class="w-full text-right text-xs">
+                    <table class="record-cards w-full text-right text-xs">
                         <thead>
                             <tr
                                 class="border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-800/60 text-stone-500 dark:text-stone-400 font-black text-[11px]"
@@ -494,7 +494,7 @@ const footerNet = computed(() =>
                                         expandedRow === r.id ? 'bg-orange-50/40 dark:bg-orange-950/10' : '',
                                     ]"
                                 >
-                                    <td class="py-4 px-4">
+                                    <td data-label="المطعم ونظام العقد" class="is-title py-4 px-4">
                                         <div class="flex items-center gap-2.5">
                                             <div
                                                 :class="[
@@ -546,7 +546,7 @@ const footerNet = computed(() =>
                                         </div>
                                     </td>
 
-                                    <td class="py-4 px-4 text-center">
+                                    <td data-label="حركة الطلبات" class="py-4 px-4 text-center">
                                         <div
                                             class="inline-flex items-center gap-1.5 p-1 rounded-xl bg-stone-100 dark:bg-stone-800/80 text-[11px] font-bold"
                                         >
@@ -575,22 +575,22 @@ const footerNet = computed(() =>
                                         </span>
                                     </td>
 
-                                    <td class="py-4 px-4 font-black text-stone-900 dark:text-white">
+                                    <td data-label="إجمالي المبيعات" class="py-4 px-4 font-black text-stone-900 dark:text-white">
                                         {{ fmt(r.gross_revenue) }}
                                         <span class="text-[10px] font-normal text-stone-400">ج.م</span>
                                     </td>
 
-                                    <td class="py-4 px-4 font-black text-orange-600 dark:text-orange-400">
+                                    <td data-label="عمولة المنصة" class="py-4 px-4 font-black text-orange-600 dark:text-orange-400">
                                         {{ fmt(r.platform_cut) }}
                                         <span class="text-[10px] font-normal text-stone-400">ج.م</span>
                                     </td>
 
-                                    <td class="py-4 px-4 font-bold text-stone-700 dark:text-stone-300">
+                                    <td data-label="المبالغ المحصلة" class="py-4 px-4 font-bold text-stone-700 dark:text-stone-300">
                                         {{ fmt(r.paid_amount || 0) }}
                                         <span class="text-[10px] font-normal text-stone-400">ج.م</span>
                                     </td>
 
-                                    <td class="py-4 px-4 text-center">
+                                    <td data-label="العمولات المستحقة" class="py-4 px-4 text-center">
                                         <div v-if="(r.unpaid_due || 0) > 0" class="inline-flex flex-col items-center">
                                             <span
                                                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-black text-xs border border-red-200 dark:border-red-900/50 shadow-xs"
@@ -614,7 +614,7 @@ const footerNet = computed(() =>
                                         </span>
                                     </td>
 
-                                    <td class="py-4 px-4">
+                                    <td data-label="صافي أرباح المطعم" class="py-4 px-4">
                                         <span class="font-black text-emerald-600 dark:text-emerald-400 text-sm">
                                             {{ fmt(r.net_restaurant_earn) }}
                                             <span class="text-[10px] font-normal text-stone-400">ج.م</span>
@@ -622,7 +622,7 @@ const footerNet = computed(() =>
                                         <span class="block text-[10px] text-stone-400 mt-0.5">دخل المطعم الصافي</span>
                                     </td>
 
-                                    <td class="py-4 px-4 text-center">
+                                    <td data-label="كشف الحساب" class="is-actions py-4 px-4 text-center">
                                         <div class="inline-flex flex-col items-center gap-1.5">
                                         <Link
                                             :href="`/admin/finance/restaurants/${r.id}`"
@@ -801,24 +801,24 @@ const footerNet = computed(() =>
                             class="border-t-2 border-stone-200 dark:border-stone-700 bg-stone-100/70 dark:bg-stone-800/70 text-xs font-black"
                         >
                             <tr>
-                                <td class="py-4 px-4 text-stone-900 dark:text-white">
+                                <td data-label="المطعم ونظام العقد" class="is-title py-4 px-4 text-stone-900 dark:text-white">
                                     الإجمالي العام ({{ filteredRestaurants.length }} مطعم)
                                 </td>
-                                <td class="py-4 px-4 text-center text-stone-700 dark:text-stone-300">
+                                <td data-label="حركة الطلبات" class="py-4 px-4 text-center text-stone-700 dark:text-stone-300">
                                     <span class="text-emerald-600">{{ footerDelivered }} تم</span>
                                     /
                                     <span class="text-red-500">{{ footerCancelled }} ملغي</span>
                                 </td>
-                                <td class="py-4 px-4 text-stone-900 dark:text-white">
+                                <td data-label="إجمالي المبيعات" class="py-4 px-4 text-stone-900 dark:text-white">
                                     {{ fmt(footerGross) }} ج.م
                                 </td>
-                                <td class="py-4 px-4 text-orange-600">{{ fmt(footerPlatform) }} ج.م</td>
-                                <td class="py-4 px-4 text-stone-800 dark:text-stone-200">
+                                <td data-label="عمولة المنصة" class="py-4 px-4 text-orange-600">{{ fmt(footerPlatform) }} ج.م</td>
+                                <td data-label="المبالغ المحصلة" class="py-4 px-4 text-stone-800 dark:text-stone-200">
                                     {{ fmt(footerPaid) }} ج.م
                                 </td>
-                                <td class="py-4 px-4 text-center text-red-600">{{ fmt(footerUnpaid) }} ج.م</td>
-                                <td class="py-4 px-4 text-emerald-600 text-sm">{{ fmt(footerNet) }} ج.م</td>
-                                <td class="py-4 px-4" />
+                                <td data-label="العمولات المستحقة" class="py-4 px-4 text-center text-red-600">{{ fmt(footerUnpaid) }} ج.م</td>
+                                <td data-label="صافي أرباح المطعم" class="py-4 px-4 text-emerald-600 text-sm">{{ fmt(footerNet) }} ج.م</td>
+                                <td data-label="كشف الحساب" class="is-actions py-4 px-4" />
                             </tr>
                         </tfoot>
                     </table>

@@ -4,6 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import type { Customer, CustomerAddress } from '../../Types';
 import { useCartStore } from '../../Stores/cartStore';
 import { BORG_EL_ARAB_UNIVERSITIES, calculateDistanceKm } from '../../constants/universities';
+import { useUserLocation } from '../../composables/useUserLocation';
 import LocationPickerMap from '../../Components/LocationPickerMap.vue';
 import {
     MapPin,
@@ -47,6 +48,8 @@ watch(
 const addressMode = ref<'university' | 'saved' | 'custom' | 'gps'>(
     isVerifiedStudent.value ? 'university' : props.addresses.length > 0 ? 'saved' : 'university',
 );
+const locationChoiceLocked = ref(false);
+const { place: detectedPlace } = useUserLocation();
 
 const selectedUniId = ref('BATU');
 const selectedLocation = ref(BORG_EL_ARAB_UNIVERSITIES[0].locations[0]);
@@ -140,13 +143,33 @@ const deliveryFee = computed(() =>
 );
 const total = computed(() => Math.max(0, subtotal.value - studentDiscount.value + deliveryFee.value));
 
-const handleUniChange = (uniId: string): void => {
+const handleUniChange = (uniId: string, manual = false): void => {
+    if (manual) {
+        locationChoiceLocked.value = true;
+    }
     selectedUniId.value = uniId;
     const uni = BORG_EL_ARAB_UNIVERSITIES.find((u) => u.id === uniId);
     if (uni && uni.locations.length > 0) {
         selectedLocation.value = uni.locations[0];
     }
 };
+
+watch(
+    detectedPlace,
+    (detected) => {
+        if (!detected || locationChoiceLocked.value) {
+            return;
+        }
+        if (detected.universityId) {
+            handleUniChange(detected.universityId);
+            return;
+        }
+        if (addressMode.value === 'university') {
+            addressMode.value = 'gps';
+        }
+    },
+    { immediate: true },
+);
 
 const handleMapLocationSelect = ({
     lat,
@@ -316,7 +339,7 @@ const handlePlaceOrder = (): void => {
                                     type="button"
                                     class="py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                     :class="addressMode === 'university' ? 'bg-orange-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'"
-                                    @click="addressMode = 'university'"
+                                    @click="locationChoiceLocked = true; addressMode = 'university'"
                                 >
                                     <GraduationCap class="w-4 h-4" />
                                     <span>مقر جامعي 🎓</span>
@@ -327,7 +350,7 @@ const handlePlaceOrder = (): void => {
                                     type="button"
                                     class="py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                     :class="addressMode === 'saved' ? 'bg-orange-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'"
-                                    @click="addressMode = 'saved'"
+                                    @click="locationChoiceLocked = true; addressMode = 'saved'"
                                 >
                                     <Building2 class="w-4 h-4" />
                                     <span>عناوين محفوظة</span>
@@ -337,7 +360,7 @@ const handlePlaceOrder = (): void => {
                                     type="button"
                                     class="py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                     :class="addressMode === 'gps' ? 'bg-orange-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'"
-                                    @click="addressMode = 'gps'"
+                                    @click="locationChoiceLocked = true; addressMode = 'gps'"
                                 >
                                     <MapPin class="w-4 h-4" />
                                     <span>خريطة ودبوس GPS 📍</span>
@@ -347,7 +370,7 @@ const handlePlaceOrder = (): void => {
                                     type="button"
                                     class="py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                     :class="addressMode === 'custom' ? 'bg-orange-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'"
-                                    @click="addressMode = 'custom'"
+                                    @click="locationChoiceLocked = true; addressMode = 'custom'"
                                 >
                                     <Plus class="w-4 h-4" />
                                     <span>عنوان مخصص</span>
@@ -370,7 +393,7 @@ const handlePlaceOrder = (): void => {
                                                     ? 'border-orange-500 bg-orange-50/70 dark:bg-orange-950/40 ring-2 ring-orange-500/20 shadow-xs'
                                                     : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 bg-stone-50/50 dark:bg-stone-800/40'
                                             "
-                                            @click="handleUniChange(uni.id)"
+                                            @click="handleUniChange(uni.id, true)"
                                         >
                                             <div class="flex items-center justify-between mb-2">
                                                 <span

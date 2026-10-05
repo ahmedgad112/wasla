@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\AuthService;
+use App\Support\SiteSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -39,13 +40,21 @@ class AuthController extends Controller
         return redirect()->route($this->authService->dashboardRouteName($user));
     }
 
-    public function showCustomerRegister(): Response
+    public function showCustomerRegister(): Response|RedirectResponse
     {
+        if (! SiteSettings::flag('allow_registrations', true)) {
+            return redirect()->route('login')->with('error', 'التسجيل مغلق حالياً من إعدادات الموقع.');
+        }
+
         return Inertia::render('Auth/CustomerRegister');
     }
 
     public function customerRegister(Request $request): RedirectResponse
     {
+        if (! SiteSettings::flag('allow_registrations', true)) {
+            return redirect()->route('login')->with('error', 'التسجيل مغلق حالياً من إعدادات الموقع.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',

@@ -253,7 +253,7 @@ watch(items, () => {
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
+                <table class="record-cards w-full text-right text-xs">
                     <thead>
                         <tr class="border-b border-stone-200 dark:border-stone-800 text-stone-400 text-[11px] font-bold">
                             <th v-if="$can('orders.manage')" class="py-3 px-4 w-10">
@@ -281,7 +281,7 @@ watch(items, () => {
                             :key="order.id"
                             class="hover:bg-stone-50 dark:hover:bg-stone-800/50"
                         >
-                            <td v-if="$can('orders.manage')" class="py-4 px-4">
+                            <td data-label="" v-if="$can('orders.manage')" class="is-select py-4 px-4">
                                 <input
                                     type="checkbox"
                                     class="rounded border-stone-300"
@@ -289,33 +289,33 @@ watch(items, () => {
                                     @change="toggleOne(order.id)"
                                 />
                             </td>
-                            <td class="py-4 px-4 font-mono font-bold text-orange-600">
+                            <td data-label="رقم الطلب" class="is-title py-4 px-4 font-mono font-bold text-orange-600">
                                 {{ order.order_number }}
                             </td>
-                            <td class="py-4 px-4 font-bold text-stone-900 dark:text-white">
+                            <td data-label="المطعم" class="py-4 px-4 font-bold text-stone-900 dark:text-white">
                                 {{ order.restaurant?.name }}
                             </td>
-                            <td class="py-4 px-4 text-stone-700 dark:text-stone-300">
+                            <td data-label="العميل" class="py-4 px-4 text-stone-700 dark:text-stone-300">
                                 {{ order.customer?.user?.name || 'عميل' }}
                             </td>
-                            <td class="py-4 px-4 text-stone-600 dark:text-stone-400">
+                            <td data-label="الكابتن" class="py-4 px-4 text-stone-600 dark:text-stone-400">
                                 {{ order.deliveryDriver?.name || '—' }}
                             </td>
-                            <td class="py-4 px-4 font-black text-stone-900 dark:text-white">
+                            <td data-label="الإجمالي" class="py-4 px-4 font-black text-stone-900 dark:text-white">
                                 {{ order.total_amount }} ج.م
                             </td>
-                            <td class="py-4 px-4 font-bold text-emerald-600 dark:text-emerald-400">
+                            <td data-label="عمولة المنصة" class="py-4 px-4 font-bold text-emerald-600 dark:text-emerald-400">
                                 {{ order.platform_commission_amount || 0 }} ج.م
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="الحالة" class="py-4 px-4">
                                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
                                     {{ order.status }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4 text-stone-400 font-mono text-[11px]">
+                            <td data-label="التاريخ والوقت" class="py-4 px-4 text-stone-400 font-mono text-[11px]">
                                 {{ formatDate(order.created_at) }}
                             </td>
-                            <td v-if="$can('orders.manage')" class="py-4 px-4">
+                            <td data-label="إجراءات" v-if="$can('orders.manage')" class="is-actions py-4 px-4">
                                 <div class="flex items-center gap-1">
                                     <button
                                         v-if="!viewingArchive"

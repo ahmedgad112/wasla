@@ -10,20 +10,20 @@ use App\Models\Restaurant;
 use App\Models\RestaurantStaff;
 use App\Models\SystemSetting;
 use App\Models\User;
-use App\Services\FinancialService;
 use App\Services\PublicCatalogCache;
+use App\Support\SiteSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RestaurantController extends Controller
 {
-    public function __construct(protected FinancialService $financialService) {}
-
     public function index(Request $request): Response
     {
         $query = Restaurant::withCount(['orders', 'deliveryDrivers', 'staff'])
@@ -49,7 +49,14 @@ class RestaurantController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/Restaurants/Create');
+        $settings = SiteSettings::formValues();
+
+        return Inertia::render('Admin/Restaurants/Create', [
+            'defaults' => [
+                'commission_rate' => (float) $settings['default_commission_rate'],
+                'delivery_fee' => (float) $settings['default_delivery_fee'],
+            ],
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -238,22 +245,112 @@ class RestaurantController extends Controller
 
     public function show(int $id): Response|RedirectResponse
     {
-        $restaurant = Restaurant::with(['staff.user', 'deliveryDrivers.user'])
-            ->withCount(['orders', 'menuItems', 'categories'])
+        $restaurant = Restaurant::query()
+            ->with(['staff.user:id,name,email,role,is_active'])
+            ->withCount(['orders', 'menuItems'])
             ->find($id);
 
         if (! $restaurant) {
             return $this->missingRestaurantRedirect();
         }
 
-        $financialSummary = $this->financialService->getPlatformSummary();
-        $restaurantFinancial = collect($this->financialService->getRestaurantFinancialTable())
-            ->firstWhere('id', $id);
+        $deliveredOrders = $restaurant->orders()->where('status', 'DELIVERED');
+        $completedOrders = (clone $deliveredOrders)->count();
+        $totalRevenue = (float) (clone $deliveredOrders)->sum('total_amount');
+        $accounts = $restaurant->staff
+            ->filter(fn (RestaurantStaff $staff): bool => $staff->user !== null)
+            ->map(fn (RestaurantStaff $staff): array => [
+                'id' => $staff->user->id,
+                'name' => $staff->user->name,
+                'email' => $staff->user->email,
+                'role' => $staff->role,
+                'is_active' => (bool) $staff->user->is_active,
+            ])
+            ->values();
+        $owner = $accounts->first(fn (array $account): bool => in_array($account['role'], ['OWNER', 'RESTAURANT_OWNER'], true));
 
         return Inertia::render('Admin/Restaurants/Show', [
-            'restaurant' => $restaurant,
-            'restaurant_financial' => $restaurantFinancial,
+            'restaurant' => array_merge($restaurant->toArray(), [
+                'owner' => $owner ? [
+                    'id' => $owner['id'],
+                    'name' => $owner['name'],
+                    'email' => $owner['email'],
+                ] : null,
+            ]),
+            'accounts' => $accounts,
+            'stats' => [
+                'total_orders' => (int) $restaurant->orders_count,
+                'completed_orders' => $completedOrders,
+                'total_revenue' => round($totalRevenue, 2),
+                'platform_commission' => round($totalRevenue * ((float) $restaurant->commission_percentage / 100), 2),
+                'avg_order_value' => $completedOrders > 0 ? round($totalRevenue / $completedOrders, 2) : 0,
+                'active_menu_items' => (int) $restaurant->menuItems()->where('is_available', true)->count(),
+            ],
+            'recentOrders' => $restaurant->orders()
+                ->latest()
+                ->limit(8)
+                ->get(['id', 'order_number', 'total_amount', 'status', 'created_at']),
+            'billing' => [
+                'access_expired' => $restaurant->billingAccessExpired(),
+                'suspended_for_billing' => $restaurant->isBillingSuspended(),
+            ],
+            'invoices' => $restaurant->invoices()
+                ->latest('issue_date')
+                ->limit(5)
+                ->get(['id', 'invoice_number', 'invoice_type', 'status', 'total_amount', 'paid_amount', 'due_date', 'issue_date']),
         ]);
+    }
+
+    public function updateAccount(Request $request, int $id, int $user): RedirectResponse
+    {
+        $restaurant = Restaurant::find($id);
+
+        if (! $restaurant) {
+            return $this->missingRestaurantRedirect();
+        }
+
+        $account = User::query()
+            ->whereKey($user)
+            ->whereIn('role', ['RESTAURANT_OWNER', 'RESTAURANT_STAFF'])
+            ->whereHas('restaurantStaff', function ($query) use ($restaurant): void {
+                $query->where('restaurant_id', $restaurant->id);
+            })
+            ->first();
+
+        if (! $account) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($account->id)],
+            'password' => ['nullable', Password::min(8)],
+        ], [
+            'name.required' => 'اسم المستخدم مطلوب.',
+            'email.required' => 'البريد الإلكتروني مطلوب.',
+            'email.email' => 'البريد الإلكتروني غير صالح.',
+            'email.unique' => 'البريد الإلكتروني مسجل مسبقاً لدى مستخدم آخر.',
+            'password.min' => 'كلمة المرور يجب ألا تقل عن 8 أحرف.',
+        ]);
+
+        $attributes = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ];
+
+        if ($request->filled('password')) {
+            $attributes['password'] = $validated['password'];
+        }
+
+        $account->update($attributes);
+        ActivityLog::log('RESTAURANT_ACCOUNT_UPDATED', 'User', $account->id, null, [
+            'restaurant_id' => $restaurant->id,
+            'email' => $account->email,
+        ]);
+
+        return redirect()
+            ->route('admin.restaurants.show', $restaurant->id)
+            ->with('success', 'تم تحديث حساب الدخول.');
     }
 
     public function edit(int $id): Response|RedirectResponse

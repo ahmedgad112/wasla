@@ -177,7 +177,7 @@ const rowMargin = (row: MonthlyPL): number =>
         <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
             <h2 class="text-lg font-semibold text-stone-900 mb-4">التفاصيل الشهرية</h2>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="record-cards w-full text-sm">
                     <thead>
                         <tr class="text-stone-400 border-b border-stone-200">
                             <th class="text-right pb-3 font-medium">الشهر</th>
@@ -193,10 +193,10 @@ const rowMargin = (row: MonthlyPL): number =>
                             :key="i"
                             class="hover:bg-white transition-colors"
                         >
-                            <td class="py-3 text-stone-900 font-medium">{{ row.month }}</td>
-                            <td class="py-3 text-amber-400">{{ fmt(row.revenue) }} ج</td>
-                            <td class="py-3 text-red-400">{{ fmt(row.expenses) }} ج</td>
-                            <td
+                            <td data-label="الشهر" class="is-title py-3 text-stone-900 font-medium">{{ row.month }}</td>
+                            <td data-label="الإيرادات" class="py-3 text-amber-400">{{ fmt(row.revenue) }} ج</td>
+                            <td data-label="المصروفات" class="py-3 text-red-400">{{ fmt(row.expenses) }} ج</td>
+                            <td data-label="صافي الربح"
                                 :class="[
                                     'py-3 font-bold',
                                     row.profit >= 0 ? 'text-emerald-400' : 'text-red-400',
@@ -204,7 +204,7 @@ const rowMargin = (row: MonthlyPL): number =>
                             >
                                 {{ fmt(row.profit) }} ج
                             </td>
-                            <td :class="['py-3', row.profit >= 0 ? 'text-emerald-400' : 'text-red-400']">
+                            <td data-label="الهامش" :class="['py-3', row.profit >= 0 ? 'text-emerald-400' : 'text-red-400']">
                                 {{ rowMargin(row).toFixed(1) }}%
                             </td>
                         </tr>

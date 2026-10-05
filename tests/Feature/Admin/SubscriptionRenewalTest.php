@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Collection;
 use App\Models\Invoice;
 use App\Models\Restaurant;
 use App\Models\User;
@@ -314,5 +315,185 @@ class SubscriptionRenewalTest extends TestCase
 
         $this->assertSame('ACTIVE', $restaurant->fresh()->status);
         Carbon::setTestNow();
+    }
+
+    public function test_renewal_can_collect_part_of_the_new_invoice(): void
+    {
+        Carbon::setTestNow('2026-10-02 12:00:00');
+        $admin = $this->admin();
+        $restaurant = $this->restaurant(['slug' => 'partial-renewal']);
+
+        $this->actingAs($admin)
+            ->post("/admin/finance/restaurants/{$restaurant->id}/renew-subscription", [
+                'price_mode' => 'same',
+                'collected_amount' => 200,
+                'payment_method' => 'CASH',
+            ])
+            ->assertRedirect(route('admin.finance.restaurants.show', $restaurant->id))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('invoices', [
+            'restaurant_id' => $restaurant->id,
+            'invoice_type' => 'SUBSCRIPTION',
+            'status' => 'PARTIALLY_PAID',
+            'total_amount' => 500,
+            'paid_amount' => 200,
+        ]);
+        $this->assertDatabaseHas('collections', [
+            'restaurant_id' => $restaurant->id,
+            'amount' => 200,
+            'payment_method' => 'CASH',
+        ]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_renewal_rejects_a_collection_larger_than_the_invoice(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant(['slug' => 'over-renewal']);
+
+        $this->actingAs($admin)
+            ->from("/admin/finance/restaurants/{$restaurant->id}")
+            ->post("/admin/finance/restaurants/{$restaurant->id}/renew-subscription", [
+                'price_mode' => 'same',
+                'collected_amount' => 700,
+                'payment_method' => 'CASH',
+            ])
+            ->assertRedirect("/admin/finance/restaurants/{$restaurant->id}")
+            ->assertSessionHasErrors('collected_amount');
+
+        $this->assertDatabaseMissing('invoices', [
+            'restaurant_id' => $restaurant->id,
+            'invoice_type' => 'SUBSCRIPTION',
+        ]);
+    }
+
+    public function test_admin_can_collect_part_of_an_open_invoice_from_the_statement(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant(['slug' => 'partial-collection']);
+        $invoice = $this->openInvoice($restaurant, 500);
+
+        $this->actingAs($admin)
+            ->post("/admin/finance/restaurants/{$restaurant->id}/collections", [
+                'invoice_id' => $invoice->id,
+                'amount' => 200,
+                'payment_method' => 'CASH',
+                'notes' => 'دفعة أولى',
+            ])
+            ->assertRedirect(route('admin.finance.restaurants.show', $restaurant->id))
+            ->assertSessionHas('success');
+
+        $invoice->refresh();
+        $this->assertSame('PARTIALLY_PAID', $invoice->status);
+        $this->assertSame(200.0, (float) $invoice->paid_amount);
+        $this->assertDatabaseHas('collections', [
+            'restaurant_id' => $restaurant->id,
+            'invoice_id' => $invoice->id,
+            'payment_method' => 'CASH',
+            'notes' => 'دفعة أولى',
+            'collected_by_user_id' => $admin->id,
+        ]);
+    }
+
+    public function test_collecting_the_remaining_amount_marks_the_invoice_paid(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant(['slug' => 'full-collection']);
+        $invoice = $this->openInvoice($restaurant, 500, 200, 'PARTIALLY_PAID');
+
+        $this->actingAs($admin)
+            ->post("/admin/finance/restaurants/{$restaurant->id}/collections", [
+                'invoice_id' => $invoice->id,
+                'amount' => 300,
+                'payment_method' => 'INSTAPAY',
+            ])
+            ->assertRedirect(route('admin.finance.restaurants.show', $restaurant->id));
+
+        $invoice->refresh();
+        $this->assertSame('PAID', $invoice->status);
+        $this->assertSame(500.0, (float) $invoice->paid_amount);
+        $this->assertSame(1, Collection::query()->where('invoice_id', $invoice->id)->count());
+    }
+
+    public function test_collection_cannot_exceed_the_invoice_remainder(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant(['slug' => 'overpay-collection']);
+        $invoice = $this->openInvoice($restaurant, 500, 450, 'PARTIALLY_PAID');
+
+        $this->actingAs($admin)
+            ->from("/admin/finance/restaurants/{$restaurant->id}")
+            ->post("/admin/finance/restaurants/{$restaurant->id}/collections", [
+                'invoice_id' => $invoice->id,
+                'amount' => 100,
+                'payment_method' => 'CASH',
+            ])
+            ->assertRedirect("/admin/finance/restaurants/{$restaurant->id}")
+            ->assertSessionHasErrors('amount');
+
+        $this->assertSame(450.0, (float) $invoice->fresh()->paid_amount);
+        $this->assertDatabaseCount('collections', 0);
+    }
+
+    public function test_admin_can_record_a_collection_without_an_open_invoice(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant(['slug' => 'standalone-collection']);
+
+        $this->actingAs($admin)
+            ->post("/admin/finance/restaurants/{$restaurant->id}/collections", [
+                'invoice_id' => '',
+                'amount' => 150,
+                'payment_method' => 'CASH',
+                'notes' => 'تحصيل نقدي',
+            ])
+            ->assertRedirect(route('admin.finance.restaurants.show', $restaurant->id))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('collections', [
+            'restaurant_id' => $restaurant->id,
+            'invoice_id' => null,
+            'payment_method' => 'CASH',
+            'notes' => 'تحصيل نقدي',
+            'collected_by_user_id' => $admin->id,
+        ]);
+    }
+
+    public function test_collection_cannot_use_another_restaurants_invoice(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant(['slug' => 'own-collection']);
+        $other = $this->restaurant(['slug' => 'other-collection', 'phone' => '01008887766']);
+        $invoice = $this->openInvoice($other, 500);
+
+        $this->actingAs($admin)
+            ->from("/admin/finance/restaurants/{$restaurant->id}")
+            ->post("/admin/finance/restaurants/{$restaurant->id}/collections", [
+                'invoice_id' => $invoice->id,
+                'amount' => 500,
+                'payment_method' => 'CASH',
+            ])
+            ->assertRedirect("/admin/finance/restaurants/{$restaurant->id}")
+            ->assertSessionHasErrors('invoice_id');
+
+        $this->assertSame('ISSUED', $invoice->fresh()->status);
+    }
+
+    private function openInvoice(Restaurant $restaurant, float $total, float $paid = 0, string $status = 'ISSUED'): Invoice
+    {
+        return Invoice::query()->create([
+            'invoice_number' => 'INV-COL-'.$restaurant->id.'-'.str_replace('.', '', (string) $total).$status,
+            'restaurant_id' => $restaurant->id,
+            'issue_date' => '2026-10-01',
+            'due_date' => '2026-10-08',
+            'subtotal' => $total,
+            'tax_amount' => 0,
+            'total_amount' => $total,
+            'paid_amount' => $paid,
+            'status' => $status,
+            'invoice_type' => 'SUBSCRIPTION',
+        ]);
     }
 }

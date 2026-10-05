@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, type Component } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     MapPin,
     Phone,
@@ -17,8 +17,13 @@ import {
     TrendingUp,
     Calendar,
     Percent,
+    KeyRound,
+    Save,
+    Bike,
 } from '@lucide/vue';
 import ConfirmModal from '../../../Components/ConfirmModal.vue';
+import { resolveMediaUrl } from '../../../lib/media';
+import { subscriptionPlanLabel } from '../../../lib/subscriptionPlans';
 
 interface Restaurant {
     id: number;
@@ -29,16 +34,29 @@ interface Restaurant {
     cover_image: string | null;
     address: string;
     phone: string;
+    whatsapp?: string | null;
     email: string | null;
     status: string;
+    availability_label?: string;
     opening_time: string;
     closing_time: string;
+    delivery_provider?: string | null;
+    delivery_enabled?: boolean;
     delivery_fee: number;
+    delivery_base_fee?: number;
+    delivery_fee_per_km?: number;
     minimum_order_amount: number;
     estimated_delivery_time: number;
-    commission_rate: number;
-    tax_rate: number;
-    payment_method: string;
+    student_discount_percentage?: number;
+    commission_percentage: number;
+    commission_type: string;
+    monthly_subscription_fee: number;
+    billing_cycle?: string | null;
+    grace_period_days?: number | null;
+    subscription_starts_at?: string | null;
+    subscription_ends_at?: string | null;
+    payment_due_date?: string | null;
+    suspension_reason?: string | null;
     created_at: string;
     owner?: { id: number; name: string; email: string };
     staff_count?: number;
@@ -46,9 +64,18 @@ interface Restaurant {
     menu_items_count?: number;
 }
 
+interface Account {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    is_active: boolean;
+}
+
 const props = defineProps<{
     restaurant: Restaurant;
-    stats: {
+    accounts?: Account[];
+    stats?: {
         total_orders: number;
         completed_orders: number;
         total_revenue: number;
@@ -56,13 +83,57 @@ const props = defineProps<{
         avg_order_value: number;
         active_menu_items: number;
     };
-    recentOrders: Array<{
+    recentOrders?: Array<{
         id: number;
         order_number: string;
         total_amount: number;
         created_at: string;
     }>;
+    billing?: {
+        access_expired: boolean;
+        suspended_for_billing: boolean;
+    };
+    invoices?: Array<{
+        id: number;
+        invoice_number: string;
+        invoice_type: string;
+        status: string;
+        total_amount: number;
+        paid_amount: number;
+        due_date: string | null;
+        issue_date: string | null;
+    }>;
 }>();
+
+const stats = computed(() => props.stats ?? {
+    total_orders: 0,
+    completed_orders: 0,
+    total_revenue: 0,
+    platform_commission: 0,
+    avg_order_value: 0,
+    active_menu_items: 0,
+});
+
+const recentOrders = computed(() => props.recentOrders ?? []);
+
+const accountRoleLabel = (role: string): string => {
+    if (role === 'OWNER' || role === 'RESTAURANT_OWNER') {
+        return 'مالك المطعم';
+    }
+
+    return 'موظف المطعم';
+};
+
+const accountForms = (props.accounts ?? []).map((account) => ({
+    account,
+    form: useForm({
+        name: account.name,
+        email: account.email,
+        password: '',
+    }),
+}));
+
+const money = (value: number | string | null | undefined): string => `${Number(value || 0).toFixed(2)} ج.م`;
 
 const suspending = ref(false);
 const confirmSuspend = ref(false);
@@ -99,26 +170,122 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 const sc = computed(() => statusConfig[props.restaurant.status] ?? statusConfig.INACTIVE);
 
 const statCards = computed(() => [
-    { label: 'إجمالي الطلبات', value: props.stats.total_orders, icon: ShoppingBag, color: 'text-indigo-400' },
-    { label: 'الطلبات المكتملة', value: props.stats.completed_orders, icon: CheckCircle, color: 'text-emerald-400' },
-    { label: 'إجمالي الإيرادات', value: `${(props.stats.total_revenue / 100).toFixed(2)} ج`, icon: DollarSign, color: 'text-amber-400' },
-    { label: 'عمولة المنصة', value: `${(props.stats.platform_commission / 100).toFixed(2)} ج`, icon: Percent, color: 'text-orange-400' },
-    { label: 'متوسط الطلب', value: `${(props.stats.avg_order_value / 100).toFixed(2)} ج`, icon: TrendingUp, color: 'text-purple-400' },
-    { label: 'عناصر القائمة', value: props.stats.active_menu_items, icon: Star, color: 'text-pink-400' },
+    { label: 'إجمالي الطلبات', value: stats.value.total_orders, icon: ShoppingBag, color: 'text-indigo-500' },
+    { label: 'الطلبات المكتملة', value: stats.value.completed_orders, icon: CheckCircle, color: 'text-emerald-500' },
+    { label: 'إجمالي الإيرادات', value: money(stats.value.total_revenue), icon: DollarSign, color: 'text-amber-500' },
+    { label: 'عمولة المنصة', value: money(stats.value.platform_commission), icon: Percent, color: 'text-orange-500' },
+    { label: 'متوسط الطلب', value: money(stats.value.avg_order_value), icon: TrendingUp, color: 'text-purple-500' },
+    { label: 'عناصر القائمة', value: stats.value.active_menu_items, icon: Star, color: 'text-pink-500' },
 ]);
 
 const infoRows = computed(() => [
     { icon: Phone, label: 'الهاتف', value: props.restaurant.phone },
+    { icon: Phone, label: 'واتساب', value: props.restaurant.whatsapp || '—' },
     { icon: Mail, label: 'البريد الإلكتروني', value: props.restaurant.email ?? '—' },
     { icon: MapPin, label: 'العنوان', value: props.restaurant.address },
     { icon: Clock, label: 'أوقات العمل', value: `${props.restaurant.opening_time} — ${props.restaurant.closing_time}` },
-    { icon: DollarSign, label: 'رسوم التوصيل', value: `${(props.restaurant.delivery_fee / 100).toFixed(2)} ج` },
-    { icon: ShoppingBag, label: 'الحد الأدنى للطلب', value: `${(props.restaurant.minimum_order_amount / 100).toFixed(2)} ج` },
-    { icon: Clock, label: 'وقت التوصيل', value: `${props.restaurant.estimated_delivery_time} دقيقة` },
+    { icon: CheckCircle, label: 'حالة الاستقبال', value: props.restaurant.availability_label ?? '—' },
+    { icon: Percent, label: 'خصم الطلاب', value: `${Number(props.restaurant.student_discount_percentage || 0).toFixed(0)}%` },
     { icon: Calendar, label: 'تاريخ الانضمام', value: new Date(props.restaurant.created_at).toLocaleDateString('ar-EG') },
 ]);
 
 const formatDate = (value: string): string => new Date(value).toLocaleDateString('ar-EG');
+
+const formatDay = (value?: string | null): string => {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value.slice(0, 10)).toLocaleDateString('ar-EG');
+};
+
+const commissionTypeLabels: Record<string, string> = {
+    PERCENTAGE: 'نسبة من كل طلب',
+    FIXED: 'مبلغ ثابت',
+    SUBSCRIPTION: 'اشتراك',
+    HYBRID: 'اشتراك ونسبة',
+    NONE: 'بدون عمولة',
+};
+
+const deliveryProviderLabels: Record<string, string> = {
+    PLATFORM: 'توصيل من الموقع',
+    RESTAURANT: 'توصيل من المطعم',
+    PICKUP: 'استلام من المطعم',
+};
+
+const invoiceTypeLabels: Record<string, string> = {
+    SUBSCRIPTION: 'اشتراك',
+    COMMISSION: 'عمولة',
+    MANUAL: 'يدوي',
+    COMBINED: 'مجمعة',
+};
+
+const invoiceStatusLabels: Record<string, string> = {
+    DRAFT: 'مسودة',
+    ISSUED: 'بانتظار السداد',
+    PAID: 'مدفوعة',
+    PARTIALLY_PAID: 'مدفوعة جزئياً',
+    OVERDUE: 'متأخرة',
+    CANCELLED: 'ملغاة',
+};
+
+const billingStatus = computed(() => {
+    if (props.billing?.suspended_for_billing) {
+        return { label: 'موقوف لعدم السداد', cls: 'bg-red-50 text-red-700' };
+    }
+
+    if (props.billing?.access_expired) {
+        return { label: 'الاشتراك منتهي', cls: 'bg-red-50 text-red-700' };
+    }
+
+    const usesSubscription = props.restaurant.commission_type === 'SUBSCRIPTION'
+        || props.restaurant.commission_type === 'HYBRID'
+        || Number(props.restaurant.monthly_subscription_fee) > 0;
+
+    if (usesSubscription && props.restaurant.subscription_ends_at) {
+        return { label: 'الاشتراك ساري', cls: 'bg-emerald-50 text-emerald-700' };
+    }
+
+    if (usesSubscription) {
+        return { label: 'بدون تاريخ انتهاء', cls: 'bg-amber-50 text-amber-800' };
+    }
+
+    return { label: 'محاسبة بالنسبة', cls: 'bg-amber-50 text-amber-800' };
+});
+
+const billingRows = computed(() => [
+    { label: 'نوع الاشتراك', value: commissionTypeLabels[props.restaurant.commission_type] ?? props.restaurant.commission_type },
+    { label: 'مدة الاشتراك', value: subscriptionPlanLabel(props.restaurant.billing_cycle) },
+    { label: 'قيمة الاشتراك', value: money(props.restaurant.monthly_subscription_fee) },
+    { label: 'نسبة العمولة', value: `${Number(props.restaurant.commission_percentage || 0).toFixed(0)}%` },
+    { label: 'بداية الاشتراك', value: formatDay(props.restaurant.subscription_starts_at) },
+    { label: 'نهاية الاشتراك', value: formatDay(props.restaurant.subscription_ends_at) },
+    { label: 'تاريخ الاستحقاق', value: formatDay(props.restaurant.payment_due_date) },
+    { label: 'مدة السماح', value: props.restaurant.grace_period_days == null ? '—' : `${props.restaurant.grace_period_days} يوم` },
+]);
+
+const deliveryRows = computed(() => {
+    const provider = props.restaurant.delivery_provider ?? 'RESTAURANT';
+    const rows = [
+        { label: 'طريقة التوصيل', value: deliveryProviderLabels[provider] ?? provider },
+        { label: 'وقت التوصيل', value: `${props.restaurant.estimated_delivery_time} دقيقة` },
+        { label: 'الحد الأدنى للطلب', value: money(props.restaurant.minimum_order_amount) },
+    ];
+
+    if (provider === 'PICKUP') {
+        return rows;
+    }
+
+    return [
+        ...rows,
+        { label: 'رسوم التوصيل', value: money(props.restaurant.delivery_fee) },
+        { label: 'سعر فتح العداد', value: money(props.restaurant.delivery_base_fee) },
+        { label: 'سعر الكيلو', value: money(props.restaurant.delivery_fee_per_km) },
+        { label: 'التوصيل', value: props.restaurant.delivery_enabled === false ? 'متوقف' : 'متاح' },
+    ];
+});
+
+const invoices = computed(() => props.invoices ?? []);
 </script>
 
 <template>
@@ -191,7 +358,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                             <component :is="row.icon" class="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
                             <div>
                                 <p class="text-xs text-stone-500">{{ row.label }}</p>
-                                <p class="text-sm text-stone-200">{{ row.value }}</p>
+                                <p class="text-sm text-stone-900">{{ row.value }}</p>
                             </div>
                         </div>
                     </div>
@@ -202,24 +369,126 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
 
                 <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
                     <h2 class="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
-                        <DollarSign class="w-5 h-5 text-amber-400" />
-                        الإعدادات المالية
+                        <KeyRound class="w-5 h-5 text-orange-500" />
+                        حسابات الدخول
                     </h2>
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="bg-white rounded-xl p-4 text-center">
-                            <p class="text-2xl font-bold text-amber-400">{{ restaurant.commission_rate }}%</p>
-                            <p class="text-xs text-stone-400 mt-1">نسبة العمولة</p>
+                    <p v-if="accountForms.length === 0" class="text-stone-400 text-sm text-center py-8">
+                        لا يوجد حساب دخول مرتبط بهذا المطعم
+                    </p>
+                    <div v-else class="space-y-4">
+                        <form
+                            v-for="entry in accountForms"
+                            :key="entry.account.id"
+                            class="rounded-xl border border-stone-200 p-4 space-y-4"
+                            @submit.prevent="entry.form.put(`/admin/restaurants/${restaurant.id}/accounts/${entry.account.id}`, { preserveScroll: true })"
+                        >
+                            <div class="flex items-center justify-between gap-3">
+                                <p class="text-sm font-semibold text-stone-900">{{ accountRoleLabel(entry.account.role) }}</p>
+                                <span
+                                    :class="entry.account.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
+                                >
+                                    {{ entry.account.is_active ? 'نشط' : 'موقوف' }}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-stone-500 mb-1">الاسم</label>
+                                    <input
+                                        v-model="entry.form.name"
+                                        type="text"
+                                        :disabled="!$can('restaurants.update')"
+                                        class="w-full bg-white border border-stone-200 rounded-lg px-4 py-2.5 text-stone-900 focus:outline-none focus:border-orange-500 disabled:bg-stone-50"
+                                    />
+                                    <p v-if="entry.form.errors.name" class="text-red-500 text-xs mt-1">{{ entry.form.errors.name }}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-stone-500 mb-1">البريد الإلكتروني (اسم الدخول)</label>
+                                    <input
+                                        v-model="entry.form.email"
+                                        type="email"
+                                        dir="ltr"
+                                        :disabled="!$can('restaurants.update')"
+                                        class="w-full bg-white border border-stone-200 rounded-lg px-4 py-2.5 text-stone-900 focus:outline-none focus:border-orange-500 disabled:bg-stone-50"
+                                    />
+                                    <p v-if="entry.form.errors.email" class="text-red-500 text-xs mt-1">{{ entry.form.errors.email }}</p>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm text-stone-500 mb-1">كلمة المرور الجديدة</label>
+                                    <input
+                                        v-model="entry.form.password"
+                                        type="password"
+                                        placeholder="اتركها فارغة إن لم ترد تغييرها"
+                                        :disabled="!$can('restaurants.update')"
+                                        class="w-full bg-white border border-stone-200 rounded-lg px-4 py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none focus:border-orange-500 disabled:bg-stone-50"
+                                    />
+                                    <p v-if="entry.form.errors.password" class="text-red-500 text-xs mt-1">{{ entry.form.errors.password }}</p>
+                                </div>
+                            </div>
+                            <div v-if="$can('restaurants.update')" class="flex justify-end">
+                                <button
+                                    type="submit"
+                                    :disabled="entry.form.processing"
+                                    class="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                                >
+                                    <Save class="w-4 h-4" />
+                                    حفظ الحساب
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <h2 class="text-lg font-semibold text-stone-900 flex items-center gap-2">
+                            <DollarSign class="w-5 h-5 text-amber-400" />
+                            الاشتراك والمحاسبة
+                        </h2>
+                        <span :class="['px-2.5 py-1 rounded-full text-xs font-medium', billingStatus.cls]">
+                            {{ billingStatus.label }}
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <div v-for="row in billingRows" :key="row.label" class="rounded-xl bg-stone-50 p-3">
+                            <p class="text-xs text-stone-500">{{ row.label }}</p>
+                            <p class="mt-1 text-sm font-semibold text-stone-900">{{ row.value }}</p>
                         </div>
-                        <div class="bg-white rounded-xl p-4 text-center">
-                            <p class="text-2xl font-bold text-indigo-400">{{ restaurant.tax_rate }}%</p>
-                            <p class="text-xs text-stone-400 mt-1">نسبة الضريبة</p>
+                    </div>
+                    <p v-if="restaurant.suspension_reason" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        سبب الإيقاف: {{ restaurant.suspension_reason }}
+                    </p>
+                </div>
+
+                <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
+                    <h2 class="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+                        <Bike class="w-5 h-5 text-sky-500" />
+                        التوصيل والاستلام
+                    </h2>
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-3">
+                        <div v-for="row in deliveryRows" :key="row.label">
+                            <p class="text-xs text-stone-500">{{ row.label }}</p>
+                            <p class="mt-1 text-sm font-semibold text-stone-900">{{ row.value }}</p>
                         </div>
-                        <div class="bg-white rounded-xl p-4 text-center">
-                            <p class="text-sm font-bold text-emerald-400">
-                                {{ restaurant.payment_method === 'BANK_TRANSFER' ? 'تحويل بنكي' : 'نقدي' }}
-                            </p>
-                            <p class="text-xs text-stone-400 mt-1">طريقة الدفع</p>
-                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
+                    <h2 class="text-lg font-semibold text-stone-900 mb-4">آخر الفواتير</h2>
+                    <p v-if="invoices.length === 0" class="text-stone-400 text-sm text-center py-8">لا توجد فواتير بعد</p>
+                    <div v-else class="space-y-3">
+                        <Link
+                            v-for="invoice in invoices"
+                            :key="invoice.id"
+                            :href="`/admin/invoices/${invoice.id}`"
+                            class="flex items-center justify-between gap-3 rounded-lg p-3 hover:bg-stone-100"
+                        >
+                            <span class="text-sm text-stone-900">#{{ invoice.invoice_number }}</span>
+                            <span class="text-xs text-stone-500">{{ invoiceTypeLabels[invoice.invoice_type] ?? invoice.invoice_type }}</span>
+                            <span class="text-xs text-stone-500">{{ invoiceStatusLabels[invoice.status] ?? invoice.status }}</span>
+                            <span class="text-sm font-medium text-stone-900">{{ money(invoice.total_amount) }}</span>
+                            <span class="text-xs text-stone-400">{{ formatDay(invoice.due_date) }}</span>
+                        </Link>
                     </div>
                 </div>
 
@@ -234,7 +503,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                             class="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-stone-100 transition-colors"
                         >
                             <span class="text-sm text-stone-300">#{{ order.order_number }}</span>
-                            <span class="text-sm text-stone-900 font-medium">{{ (order.total_amount / 100).toFixed(2) }} ج</span>
+                            <span class="text-sm text-stone-900 font-medium">{{ money(order.total_amount) }}</span>
                             <span class="text-xs text-stone-400">{{ formatDate(order.created_at) }}</span>
                         </Link>
                     </div>
@@ -243,7 +512,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
 
             <div class="space-y-6">
                 <div v-if="restaurant.logo" class="bg-white border border-stone-200 rounded-2xl p-6 text-center shadow-xs">
-                    <img :src="restaurant.logo" :alt="restaurant.name" class="w-24 h-24 rounded-full object-cover mx-auto" />
+                    <img :src="resolveMediaUrl(restaurant.logo, '')" :alt="restaurant.name" class="w-24 h-24 rounded-full object-cover mx-auto" />
                 </div>
 
                 <div v-if="restaurant.owner" class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
@@ -260,27 +529,28 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                 </div>
 
                 <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
-                    <h3 class="text-sm font-semibold text-stone-300 mb-3">إجراءات سريعة</h3>
+                    <h3 class="text-sm font-semibold text-stone-900 mb-3">إجراءات سريعة</h3>
                     <div class="space-y-2">
                         <Link
                             v-if="$can('restaurants.update')"
                             :href="`/admin/restaurants/${restaurant.id}/edit`"
-                            class="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-stone-100 text-stone-300 text-sm transition-colors"
+                            class="flex items-center gap-2 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm font-medium text-stone-800 transition-colors hover:bg-stone-50"
                         >
-                            <Edit class="w-4 h-4" /> تعديل بيانات المطعم
+                            <Edit class="w-4 h-4 text-indigo-500" /> تعديل بيانات المطعم
                         </Link>
                         <Link
                             v-if="$can('finance.view')"
-                            :href="`/admin/finance/overview?restaurant=${restaurant.id}`"
-                            class="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-stone-100 text-stone-300 text-sm transition-colors"
+                            :href="`/admin/finance/restaurants/${restaurant.id}`"
+                            class="flex items-center gap-2 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm font-medium text-stone-800 transition-colors hover:bg-stone-50"
                         >
-                            <DollarSign class="w-4 h-4" /> عرض المالية
+                            <DollarSign class="w-4 h-4 text-amber-500" /> عرض المالية
                         </Link>
                         <Link
-                            :href="`/admin/invoices?restaurant=${restaurant.id}`"
-                            class="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-stone-100 text-stone-300 text-sm transition-colors"
+                            v-if="$can('billing.view')"
+                            :href="`/admin/billing?restaurant_id=${restaurant.id}`"
+                            class="flex items-center gap-2 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm font-medium text-stone-800 transition-colors hover:bg-stone-50"
                         >
-                            <ShoppingBag class="w-4 h-4" /> الفواتير
+                            <ShoppingBag class="w-4 h-4 text-emerald-500" /> فواتير المطعم
                         </Link>
                     </div>
                 </div>

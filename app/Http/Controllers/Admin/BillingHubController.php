@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Collection;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Restaurant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -68,6 +71,25 @@ class BillingHubController extends Controller
         $restaurants = Restaurant::orderBy('name')
             ->get(['id', 'name', 'status', 'commission_type', 'commission_percentage', 'monthly_subscription_fee']);
 
+        $openInvoices = Invoice::query()
+            ->whereNotIn('status', ['PAID', 'CANCELLED'])
+            ->orderBy('due_date')
+            ->get(['id', 'invoice_number', 'restaurant_id', 'total_amount', 'paid_amount', 'status', 'due_date', 'invoice_type'])
+            ->map(fn (Invoice $invoice): array => [
+                'id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'restaurant_id' => $invoice->restaurant_id,
+                'total_amount' => (float) $invoice->total_amount,
+                'paid_amount' => (float) $invoice->paid_amount,
+                'remaining' => $invoice->remaining_balance,
+                'status' => $invoice->status,
+                'due_date' => $invoice->due_date instanceof Carbon
+                    ? $invoice->due_date->toDateString()
+                    : null,
+                'invoice_type' => $invoice->invoice_type,
+            ])
+            ->values();
+
         return Inertia::render('Admin/Billing/Hub', [
             'stats' => [
                 'total_revenue' => round($totalRevenue, 2),
@@ -77,6 +99,7 @@ class BillingHubController extends Controller
             ],
             'invoices' => $invoices,
             'collections' => $collections,
+            'openInvoices' => $openInvoices,
             'overdueRestaurants' => $overdueRestaurants,
             'restaurants' => $restaurants,
             'filters' => $request->only('inv_status', 'restaurant_id'),
@@ -154,6 +177,10 @@ class BillingHubController extends Controller
         $locked = 0;
 
         foreach ($overdueInvoices as $invoice) {
+            if (! $invoice instanceof Invoice) {
+                continue;
+            }
+
             $invoice->update(['status' => 'OVERDUE']);
 
             if ($invoice->restaurant && $invoice->restaurant->status !== 'SUSPENDED') {
@@ -189,7 +216,7 @@ class BillingHubController extends Controller
 
         $this->assertInvoiceBelongsToRestaurant($validated['restaurant_id'], $validated['invoice_id'] ?? null);
 
-        $validated['collected_by_user_id'] = auth()->id();
+        $validated['collected_by_user_id'] = Auth::id();
 
         $collection = Collection::create($validated);
 
@@ -384,7 +411,7 @@ class BillingHubController extends Controller
         ]);
 
         $item = $invoice->items()->first();
-        if ($item) {
+        if ($item instanceof InvoiceItem) {
             $item->update([
                 'amount' => $validated['subtotal'],
                 'description' => $validated['invoice_type'] === 'SUBSCRIPTION'

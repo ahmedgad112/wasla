@@ -6,7 +6,6 @@ import {
     AlertCircle,
     TrendingUp,
     ArrowRight,
-    ShieldCheck,
     GraduationCap,
     Plus,
 } from '@lucide/vue';
@@ -155,7 +154,7 @@ withDefaults(
             </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link
                 href="/admin/restaurants"
                 class="p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 hover:border-orange-500 flex items-center gap-3 transition group shadow-xs"
@@ -192,19 +191,6 @@ withDefaults(
                 <div>
                     <span class="text-xs font-bold text-stone-900 dark:text-white block group-hover:text-orange-600">الأرباح والمصروفات</span>
                     <span class="text-[10px] text-stone-400">التقرير المالي العام</span>
-                </div>
-            </Link>
-
-            <Link
-                href="/admin/backups"
-                class="p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 hover:border-orange-500 flex items-center gap-3 transition group shadow-xs"
-            >
-                <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center">
-                    <ShieldCheck class="w-4 h-4" />
-                </div>
-                <div>
-                    <span class="text-xs font-bold text-stone-900 dark:text-white block group-hover:text-orange-600">النسخ الاحتياطي</span>
-                    <span class="text-[10px] text-stone-400">أمان قاعدة البيانات</span>
                 </div>
             </Link>
         </div>

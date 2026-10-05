@@ -173,7 +173,7 @@ const chartOptions = {
         <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
             <h2 class="text-lg font-semibold text-stone-900 mb-4">الإيرادات حسب المطعم</h2>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="record-cards w-full text-sm">
                     <thead>
                         <tr class="text-stone-400 border-b border-stone-200">
                             <th class="text-right pb-3 font-medium">المطعم</th>
@@ -188,10 +188,10 @@ const chartOptions = {
                             :key="i"
                             class="hover:bg-white transition-colors"
                         >
-                            <td class="py-3 text-stone-900 font-medium">{{ r.restaurant_name }}</td>
-                            <td class="py-3 text-stone-300">{{ r.orders }}</td>
-                            <td class="py-3 text-amber-400 font-semibold">{{ fmt(r.revenue) }} ج</td>
-                            <td class="py-3 text-indigo-400 font-semibold">{{ fmt(r.commission) }} ج</td>
+                            <td data-label="المطعم" class="is-title py-3 text-stone-900 font-medium">{{ r.restaurant_name }}</td>
+                            <td data-label="الطلبات" class="py-3 text-stone-300">{{ r.orders }}</td>
+                            <td data-label="الإيرادات" class="py-3 text-amber-400 font-semibold">{{ fmt(r.revenue) }} ج</td>
+                            <td data-label="العمولة" class="py-3 text-indigo-400 font-semibold">{{ fmt(r.commission) }} ج</td>
                         </tr>
                     </tbody>
                 </table>

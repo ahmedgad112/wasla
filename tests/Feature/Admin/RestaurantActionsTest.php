@@ -6,8 +6,10 @@ use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\Offer;
 use App\Models\Restaurant;
+use App\Models\RestaurantStaff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -59,7 +61,133 @@ class RestaurantActionsTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Restaurants/Show')
                 ->where('restaurant.id', $restaurant->id)
-                ->where('restaurant.slug', 'test-restaurant-actions'));
+                ->where('restaurant.slug', 'test-restaurant-actions')
+                ->where('stats.total_orders', 0)
+                ->has('recentOrders')
+                ->has('accounts')
+                ->where('restaurant.commission_type', 'PERCENTAGE')
+                ->where('billing.access_expired', false)
+                ->has('invoices'));
+    }
+
+    public function test_restaurant_details_include_the_subscription_profile(): void
+    {
+        $admin = $this->adminUser();
+        $restaurant = $this->restaurant([
+            'slug' => 'subscription-restaurant-profile',
+            'phone' => '01005554433',
+            'commission_type' => 'SUBSCRIPTION',
+            'commission_percentage' => 0,
+            'monthly_subscription_fee' => 900,
+            'billing_cycle' => 'QUARTERLY',
+            'grace_period_days' => 7,
+            'subscription_starts_at' => '2026-10-01',
+            'subscription_ends_at' => '2026-12-31',
+            'payment_due_date' => '2027-01-07',
+            'delivery_provider' => 'PLATFORM',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/restaurants/{$restaurant->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('restaurant.commission_type', 'SUBSCRIPTION')
+                ->where('restaurant.billing_cycle', 'QUARTERLY')
+                ->where('restaurant.delivery_provider', 'PLATFORM')
+                ->where('restaurant.grace_period_days', 7)
+                ->where('billing.suspended_for_billing', false)
+                ->where('billing.access_expired', false));
+    }
+
+    public function test_admin_can_change_a_restaurant_login_from_its_details(): void
+    {
+        $admin = $this->adminUser();
+        $restaurant = $this->restaurant();
+        $owner = User::factory()->create([
+            'name' => 'مالك المطعم',
+            'email' => 'owner@restaurant.test',
+            'role' => 'RESTAURANT_OWNER',
+            'password' => 'old-password',
+        ]);
+        RestaurantStaff::query()->create([
+            'restaurant_id' => $restaurant->id,
+            'user_id' => $owner->id,
+            'role' => 'OWNER',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/restaurants/{$restaurant->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('accounts.0.email', 'owner@restaurant.test')
+                ->where('restaurant.owner.email', 'owner@restaurant.test'));
+
+        $this->actingAs($admin)
+            ->put("/admin/restaurants/{$restaurant->id}/accounts/{$owner->id}", [
+                'name' => 'المالك الجديد',
+                'email' => 'new-owner@restaurant.test',
+                'password' => 'new-password',
+            ])
+            ->assertRedirect(route('admin.restaurants.show', $restaurant->id))
+            ->assertSessionHas('success');
+
+        $owner->refresh();
+        $this->assertSame('المالك الجديد', $owner->name);
+        $this->assertSame('new-owner@restaurant.test', $owner->email);
+        $this->assertTrue(Hash::check('new-password', $owner->password));
+    }
+
+    public function test_blank_password_keeps_the_restaurant_login_password(): void
+    {
+        $admin = $this->adminUser();
+        $restaurant = $this->restaurant();
+        $owner = User::factory()->create([
+            'email' => 'keep@restaurant.test',
+            'role' => 'RESTAURANT_OWNER',
+            'password' => 'kept-password',
+        ]);
+        RestaurantStaff::query()->create([
+            'restaurant_id' => $restaurant->id,
+            'user_id' => $owner->id,
+            'role' => 'OWNER',
+        ]);
+
+        $this->actingAs($admin)
+            ->put("/admin/restaurants/{$restaurant->id}/accounts/{$owner->id}", [
+                'name' => $owner->name,
+                'email' => 'keep@restaurant.test',
+                'password' => '',
+            ])
+            ->assertRedirect(route('admin.restaurants.show', $restaurant->id));
+
+        $this->assertTrue(Hash::check('kept-password', $owner->fresh()->password));
+    }
+
+    public function test_admin_cannot_change_a_login_that_belongs_to_another_restaurant(): void
+    {
+        $admin = $this->adminUser();
+        $restaurant = $this->restaurant();
+        $other = $this->restaurant(['slug' => 'other-restaurant-actions', 'phone' => '01009998877']);
+        $owner = User::factory()->create([
+            'email' => 'other@restaurant.test',
+            'role' => 'RESTAURANT_OWNER',
+        ]);
+        RestaurantStaff::query()->create([
+            'restaurant_id' => $other->id,
+            'user_id' => $owner->id,
+            'role' => 'OWNER',
+        ]);
+
+        $this->actingAs($admin)
+            ->put("/admin/restaurants/{$restaurant->id}/accounts/{$owner->id}", [
+                'name' => 'اختراق',
+                'email' => 'hacked@restaurant.test',
+                'password' => 'new-password',
+            ])
+            ->assertNotFound();
+
+        $this->assertSame('other@restaurant.test', $owner->fresh()->email);
     }
 
     public function test_admin_can_open_restaurant_edit_page(): void

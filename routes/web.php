@@ -2,9 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLog;
 use App\Http\Controllers\Admin\AnalyticsController as AdminAnalytics;
-use App\Http\Controllers\Admin\BackupController as AdminBackup;
 use App\Http\Controllers\Admin\BillingHubController as AdminBillingHub;
-use App\Http\Controllers\Admin\CmsController as AdminCms;
 use App\Http\Controllers\Admin\CollectionController as AdminCollection;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomer;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
@@ -12,6 +10,7 @@ use App\Http\Controllers\Admin\DeliveryDriverController as AdminDriver;
 use App\Http\Controllers\Admin\FinanceController as AdminFinance;
 use App\Http\Controllers\Admin\InvoiceController as AdminInvoice;
 use App\Http\Controllers\Admin\OrderController as AdminOrder;
+use App\Http\Controllers\Admin\ReportController as AdminReport;
 use App\Http\Controllers\Admin\RestaurantController as AdminRestaurant;
 use App\Http\Controllers\Admin\RoleController as AdminRole;
 use App\Http\Controllers\Admin\SettingsController as AdminSettings;
@@ -129,6 +128,7 @@ Route::middleware(['auth', 'portal:ADMIN', 'route.permission'])->prefix('admin')
     Route::post('/restaurants/{id}/suspend', [AdminRestaurant::class, 'suspend'])->name('restaurants.suspend');
     Route::post('/restaurants/{id}/activate', [AdminRestaurant::class, 'activate'])->name('restaurants.activate');
     Route::put('/restaurants/{id}/financial-config', [AdminRestaurant::class, 'updateFinancialConfig'])->name('restaurants.financial-config');
+    Route::put('/restaurants/{id}/accounts/{user}', [AdminRestaurant::class, 'updateAccount'])->name('restaurants.accounts.update');
 
     // Orders
     Route::get('/orders', [AdminOrder::class, 'index'])->name('orders.index');
@@ -157,6 +157,7 @@ Route::middleware(['auth', 'portal:ADMIN', 'route.permission'])->prefix('admin')
         Route::get('/', [AdminFinance::class, 'overview'])->name('overview');
         Route::get('/restaurants/{id}', [AdminFinance::class, 'restaurantStatement'])->name('restaurants.show');
         Route::post('/restaurants/{id}/renew-subscription', [AdminFinance::class, 'renewSubscription'])->name('restaurants.renew-subscription');
+        Route::post('/restaurants/{id}/collections', [AdminFinance::class, 'recordCollection'])->name('restaurants.collect');
         Route::get('/revenue', [AdminFinance::class, 'revenue'])->name('revenue');
         Route::get('/expenses', [AdminFinance::class, 'expenses'])->name('expenses');
         Route::post('/expenses', [AdminFinance::class, 'storeExpense'])->name('expenses.store');
@@ -192,18 +193,10 @@ Route::middleware(['auth', 'portal:ADMIN', 'route.permission'])->prefix('admin')
 
     // Analytics
     Route::get('/analytics', [AdminAnalytics::class, 'index'])->name('analytics');
-
-    // Landing Page CMS
-    Route::get('/cms', [AdminCms::class, 'index'])->name('cms.index');
-    Route::put('/cms', [AdminCms::class, 'update'])->name('cms.update');
+    Route::get('/reports', [AdminReport::class, 'index'])->name('reports');
 
     // Activity Logs
     Route::get('/activity-logs', [AdminActivityLog::class, 'index'])->name('activity-logs');
-
-    // Backups
-    Route::get('/backups', [AdminBackup::class, 'index'])->name('backups.index');
-    Route::post('/backups', [AdminBackup::class, 'create'])->name('backups.create');
-    Route::delete('/backups/{id}', [AdminBackup::class, 'destroy'])->name('backups.destroy');
 
     // Settings
     Route::get('/settings', [AdminSettings::class, 'index'])->name('settings.index');

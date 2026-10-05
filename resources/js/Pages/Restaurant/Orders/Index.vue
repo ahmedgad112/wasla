@@ -17,8 +17,6 @@ import {
     User,
     MapPin,
     DollarSign,
-    LayoutGrid,
-    Table as TableIcon,
     X,
     UserCheck,
     RefreshCw,
@@ -41,7 +39,7 @@ const props = withDefaults(
             today_orders: number;
             today_revenue: number;
         };
-        available_drivers?: { id: number; name: string; phone: string }[];
+        available_drivers?: { id: number; name: string; phone: string; restaurant_id?: number | null }[];
     }>(),
     {
         available_drivers: () => [],
@@ -50,7 +48,6 @@ const props = withDefaults(
 );
 
 const items = computed(() => props.orders?.data || []);
-const viewMode = ref<'CARDS' | 'TABLE'>('CARDS');
 const searchTerm = ref(props.filters.search || '');
 const assigningOrderId = ref<number | null>(null);
 const selectedDriverId = ref<number | string>('');
@@ -306,35 +303,6 @@ const orderDriver = (order: Order) => order.delivery_driver || order.deliveryDri
                         بحث
                     </button>
                 </form>
-
-                <div class="flex items-center gap-1.5 self-end sm:self-auto bg-stone-100 dark:bg-stone-800 p-1 rounded-2xl">
-                    <button
-                        type="button"
-                        :class="[
-                            'px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5',
-                            viewMode === 'CARDS'
-                                ? 'bg-white dark:bg-stone-900 text-orange-600 dark:text-orange-400 shadow-xs'
-                                : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200',
-                        ]"
-                        @click="viewMode = 'CARDS'"
-                    >
-                        <LayoutGrid class="w-4 h-4" />
-                        <span>عرض البطاقات</span>
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5',
-                            viewMode === 'TABLE'
-                                ? 'bg-white dark:bg-stone-900 text-orange-600 dark:text-orange-400 shadow-xs'
-                                : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200',
-                        ]"
-                        @click="viewMode = 'TABLE'"
-                    >
-                        <TableIcon class="w-4 h-4" />
-                        <span>عرض الجدول</span>
-                    </button>
-                </div>
             </div>
 
             <div class="flex items-center gap-1.5 overflow-x-auto pb-2 custom-scrollbar">
@@ -374,7 +342,7 @@ const orderDriver = (order: Order) => order.delivery_driver || order.deliveryDri
             </p>
         </div>
 
-        <div v-else-if="viewMode === 'CARDS'" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div
                 v-for="order in items"
                 :key="order.id"
@@ -474,7 +442,7 @@ const orderDriver = (order: Order) => order.delivery_driver || order.deliveryDri
                             >
                                 <option value="">-- اختر من الكباتن المتاحين --</option>
                                 <option v-for="d in available_drivers" :key="d.id" :value="d.id">
-                                    {{ d.name }} ({{ d.phone }})
+                                    {{ d.name }} — {{ d.restaurant_id ? 'المطعم' : 'الموقع' }} ({{ d.phone }})
                                 </option>
                             </select>
                             <button
@@ -569,109 +537,6 @@ const orderDriver = (order: Order) => order.delivery_driver || order.deliveryDri
             </div>
         </div>
 
-        <div v-else class="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 p-6 shadow-xs">
-            <div class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
-                    <thead>
-                        <tr class="border-b border-stone-200 dark:border-stone-800 text-stone-400 font-bold">
-                            <th class="py-3 px-4">رقم الطلب</th>
-                            <th class="py-3 px-4">العميل والهاتف</th>
-                            <th class="py-3 px-4">العنوان</th>
-                            <th class="py-3 px-4">الأصناف</th>
-                            <th class="py-3 px-4">كابتن التوصيل</th>
-                            <th class="py-3 px-4">الإجمالي</th>
-                            <th class="py-3 px-4">الحالة</th>
-                            <th class="py-3 px-4">الوقت</th>
-                            <th class="py-3 px-4 text-center">إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-stone-100 dark:divide-stone-800">
-                        <tr
-                            v-for="order in items"
-                            :key="order.id"
-                            class="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition"
-                        >
-                            <td class="py-4 px-4 font-mono font-black text-orange-600">
-                                {{ order.order_number }}
-                            </td>
-                            <td class="py-4 px-4">
-                                <span class="font-bold text-stone-900 dark:text-white block">
-                                    {{ order.customer?.user?.name || 'عميل' }}
-                                </span>
-                                <a
-                                    v-if="order.customer?.user?.phone"
-                                    :href="`tel:${order.customer.user.phone}`"
-                                    class="text-[11px] text-stone-400 hover:text-orange-600 font-mono"
-                                >
-                                    {{ order.customer.user.phone }}
-                                </a>
-                            </td>
-                            <td class="py-4 px-4 text-stone-500 max-w-xs truncate">
-                                {{ order.address }}
-                            </td>
-                            <td class="py-4 px-4 font-medium text-stone-700 dark:text-stone-300">
-                                {{ order.items?.length || 0 }} أصناف
-                            </td>
-                            <td class="py-4 px-4">
-                                <span v-if="orderDriver(order)" class="font-bold text-emerald-600 dark:text-emerald-400 block">
-                                    {{ orderDriver(order)?.name }}
-                                </span>
-                                <button
-                                    v-else
-                                    class="text-purple-600 text-[11px] font-bold hover:underline"
-                                    @click="assigningOrderId = order.id"
-                                >
-                                    + تعيين كابتن
-                                </button>
-                            </td>
-                            <td class="py-4 px-4 font-black text-stone-900 dark:text-white">
-                                {{ Number(order.total_amount).toLocaleString() }} ج.م
-                            </td>
-                            <td class="py-4 px-4">
-                                <span :class="['px-2.5 py-1 rounded-full text-[10px] font-black border', getStatusDetails(order.status).bg]">
-                                    {{ getStatusDetails(order.status).label }}
-                                </span>
-                            </td>
-                            <td class="py-4 px-4 text-stone-400 font-mono text-[11px]">
-                                {{ new Date(order.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) }}
-                            </td>
-                            <td class="py-4 px-4 text-center">
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <button
-                                        v-if="order.status === 'PENDING'"
-                                        class="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold text-[11px]"
-                                        @click="handleAdvanceStatus(order.id, 'CONFIRMED')"
-                                    >
-                                        تأكيد
-                                    </button>
-                                    <button
-                                        v-if="order.status === 'CONFIRMED'"
-                                        class="px-2.5 py-1 rounded-lg bg-orange-600 text-white font-bold text-[11px]"
-                                        @click="handleAdvanceStatus(order.id, 'PREPARING')"
-                                    >
-                                        طهي
-                                    </button>
-                                    <button
-                                        v-if="order.status === 'PREPARING'"
-                                        class="px-2.5 py-1 rounded-lg bg-purple-600 text-white font-bold text-[11px]"
-                                        @click="handleAdvanceStatus(order.id, 'READY_FOR_PICKUP')"
-                                    >
-                                        جاهز
-                                    </button>
-                                    <Link
-                                        :href="`/restaurant/orders/${order.id}`"
-                                        class="p-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:text-orange-600"
-                                        title="عرض التفاصيل"
-                                    >
-                                        <Eye class="w-3.5 h-3.5" />
-                                    </Link>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
         <div
             v-if="orders?.links && orders.links.length > 3"

@@ -200,7 +200,7 @@ const formatAmount = (amount: number | string): string => Number(amount).toLocal
                 </p>
             </div>
             <div v-else class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
+                <table class="record-cards w-full text-right text-xs">
                     <thead>
                         <tr
                             class="border-b border-stone-200 dark:border-stone-800 text-stone-400 text-[11px] font-bold"
@@ -221,10 +221,10 @@ const formatAmount = (amount: number | string): string => Number(amount).toLocal
                             :key="inv.id"
                             class="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition"
                         >
-                            <td class="py-4 px-4 font-mono font-bold text-orange-600">
+                            <td data-label="رقم الفاتورة" class="is-title py-4 px-4 font-mono font-bold text-orange-600">
                                 {{ inv.invoice_number }}
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="المطعم" class="py-4 px-4">
                                 <div class="font-bold text-stone-900 dark:text-white">
                                     {{ inv.restaurant?.name || 'مطعم غير محدد' }}
                                 </div>
@@ -232,7 +232,7 @@ const formatAmount = (amount: number | string): string => Number(amount).toLocal
                                     {{ inv.restaurant.phone }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="حالة المطعم" class="py-4 px-4">
                                 <span
                                     v-if="inv.restaurant?.status === 'SUSPENDED'"
                                     class="px-2.5 py-1 rounded-full text-[10px] font-black bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 inline-flex items-center gap-1"
@@ -248,14 +248,14 @@ const formatAmount = (amount: number | string): string => Number(amount).toLocal
                                     نشط
                                 </span>
                             </td>
-                            <td class="py-4 px-4 text-stone-600 dark:text-stone-400">
+                            <td data-label="نوع الفاتورة" class="py-4 px-4 text-stone-600 dark:text-stone-400">
                                 {{ inv.invoice_type === 'COMMISSION' ? 'عمولة مبيعات' : 'اشتراك شهري' }}
                             </td>
-                            <td class="py-4 px-4 font-black text-stone-900 dark:text-white">
+                            <td data-label="المبلغ" class="py-4 px-4 font-black text-stone-900 dark:text-white">
                                 {{ formatAmount(inv.total_amount) }} ج.م
                             </td>
-                            <td class="py-4 px-4 font-mono text-stone-500">{{ inv.due_date }}</td>
-                            <td class="py-4 px-4">
+                            <td data-label="تاريخ الاستحقاق" class="py-4 px-4 font-mono text-stone-500">{{ inv.due_date }}</td>
+                            <td data-label="حالة التحصيل" class="py-4 px-4">
                                 <span
                                     :class="[
                                         'px-2.5 py-1 rounded-full text-[10px] font-bold',
@@ -265,7 +265,7 @@ const formatAmount = (amount: number | string): string => Number(amount).toLocal
                                     {{ statusLabel(inv.status) }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4 text-center">
+                            <td data-label="الإجراء المالي والتنفيذي" class="is-actions py-4 px-4 text-center">
                                 <div class="flex items-center justify-center gap-1.5 flex-wrap">
                                     <template v-if="inv.status !== 'PAID' && inv.status !== 'CANCELLED' && $can('billing.manage')">
                                         <button

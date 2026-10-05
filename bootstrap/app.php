@@ -3,6 +3,7 @@
 use App\Http\Middleware\CheckBillingStatus;
 use App\Http\Middleware\EnsurePortalRole;
 use App\Http\Middleware\EnsureRoutePermission;
+use App\Http\Middleware\EnsureSiteIsAvailable;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Services\AuthService;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Inertia middleware — shares auth/flash data with every React page
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            EnsureSiteIsAvailable::class,
         ]);
 
         // Portal role enforcement — usage: ->middleware('portal:ADMIN')

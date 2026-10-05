@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowRight, Save, User, Store, Lock } from '@lucide/vue';
+import { ArrowRight, Bike, Save, User, Store, Lock } from '@lucide/vue';
 import type { Restaurant } from '../../../Types';
 
 const props = defineProps<{
@@ -13,12 +13,22 @@ const form = useForm({
     email: '',
     phone: '',
     password: '',
+    affiliation: '' as '' | 'restaurant' | 'platform',
     restaurant_id: '',
+    vehicle_type: 'MOTORCYCLE',
+    vehicle_plate: '',
 });
 
 const selectedRestaurantName = computed(
-    () => props.restaurants.find((r) => String(r.id) === form.restaurant_id)?.name,
+    () => props.restaurants.find((r) => String(r.id) === String(form.restaurant_id))?.name,
 );
+
+const chooseAffiliation = (affiliation: 'restaurant' | 'platform'): void => {
+    form.affiliation = affiliation;
+    if (affiliation === 'platform') {
+        form.restaurant_id = '';
+    }
+};
 
 const submit = (): void => {
     form.post('/admin/delivery-drivers');
@@ -37,39 +47,75 @@ const submit = (): void => {
                 <ArrowRight class="w-5 h-5" />
             </Link>
             <div>
-                <h1 class="text-xl font-black text-stone-900 dark:text-white">إضافة مندوب توصيل جديد</h1>
-                <p class="text-xs text-stone-500 mt-0.5">أنشئ حساب مندوب وحدد المطعم التابع له</p>
+                <h1 class="text-xl font-black text-stone-900 dark:text-white">إضافة كابتن توصيل جديد</h1>
+                <p class="text-xs text-stone-500 mt-0.5">اختَر هل الكابتن تابع لمطعم ولا للموقع</p>
             </div>
         </div>
 
         <form class="space-y-5" @submit.prevent="submit">
             <div class="p-6 bg-white dark:bg-stone-900 rounded-2xl border border-orange-200 dark:border-orange-900 shadow-xs">
-                <h2 class="text-sm font-black text-stone-900 dark:text-white flex items-center gap-2 mb-4">
+                <h2 class="text-sm font-black text-stone-900 dark:text-white flex items-center gap-2 mb-2">
                     <Store class="w-4 h-4 text-orange-500" />
-                    المطعم التابع له المندوب
+                    جهة الكابتن
                     <span class="text-red-500 text-xs">*</span>
                 </h2>
                 <p class="text-xs text-stone-500 mb-3">
-                    يجب تحديد مطعم واحد فقط. المندوب سيكون حصرياً تابعاً لهذا المطعم ولن يظهر في أي مطعم آخر.
+                    كابتن المطعم يوصّل طلبات مطعمه فقط. كابتن الموقع يتسند على طلبات أي مطعم.
                 </p>
-                <select
-                    v-model="form.restaurant_id"
-                    required
-                    :class="[
-                        'w-full p-3 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500 transition',
-                        form.errors.restaurant_id
-                            ? 'border-red-400 bg-red-50 dark:bg-red-950/20'
-                            : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white',
-                    ]"
-                >
-                    <option value="">— اختر المطعم —</option>
-                    <option v-for="r in restaurants" :key="r.id" :value="r.id">{{ r.name }}</option>
-                </select>
-                <p v-if="form.errors.restaurant_id" class="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                    <span>⚠</span> {{ form.errors.restaurant_id }}
-                </p>
-                <p v-if="form.restaurant_id" class="text-emerald-600 dark:text-emerald-400 text-xs mt-2 font-bold">
-                    ✓ سيكون المندوب تابعاً لـ: {{ selectedRestaurantName }}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                        type="button"
+                        :class="[
+                            'rounded-2xl border-2 p-4 text-right transition',
+                            form.affiliation === 'restaurant'
+                                ? 'border-orange-500 bg-orange-50 text-orange-900 dark:bg-orange-950/40 dark:text-orange-200'
+                                : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300',
+                        ]"
+                        @click="chooseAffiliation('restaurant')"
+                    >
+                        <p class="text-sm font-black">كابتن مطعم</p>
+                        <p class="mt-1 text-[11px] opacity-80">تابع لمطعم واحد ويظهر في طلباته فقط.</p>
+                    </button>
+                    <button
+                        type="button"
+                        :class="[
+                            'rounded-2xl border-2 p-4 text-right transition',
+                            form.affiliation === 'platform'
+                                ? 'border-sky-500 bg-sky-50 text-sky-900 dark:bg-sky-950/40 dark:text-sky-200'
+                                : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300',
+                        ]"
+                        @click="chooseAffiliation('platform')"
+                    >
+                        <p class="text-sm font-black">كابتن الموقع</p>
+                        <p class="mt-1 text-[11px] opacity-80">تابع للمنصة ويتسند على طلبات المطاعم.</p>
+                    </button>
+                </div>
+                <p v-if="form.errors.affiliation" class="text-red-500 text-xs mt-2">{{ form.errors.affiliation }}</p>
+
+                <div v-if="form.affiliation === 'restaurant'" class="mt-4">
+                    <label class="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1.5">
+                        المطعم <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        v-model="form.restaurant_id"
+                        required
+                        :class="[
+                            'w-full p-3 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500 transition',
+                            form.errors.restaurant_id
+                                ? 'border-red-400 bg-red-50 dark:bg-red-950/20'
+                                : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white',
+                        ]"
+                    >
+                        <option value="">— اختر المطعم —</option>
+                        <option v-for="r in restaurants" :key="r.id" :value="r.id">{{ r.name }}</option>
+                    </select>
+                    <p v-if="form.errors.restaurant_id" class="text-red-500 text-xs mt-1.5">{{ form.errors.restaurant_id }}</p>
+                    <p v-if="form.restaurant_id" class="text-emerald-600 dark:text-emerald-400 text-xs mt-2 font-bold">
+                        سيكون الكابتن تابعاً لـ: {{ selectedRestaurantName }}
+                    </p>
+                </div>
+                <p v-else-if="form.affiliation === 'platform'" class="text-sky-600 dark:text-sky-400 text-xs mt-3 font-bold">
+                    الكابتن هيبقى تابع للموقع، ومش مربوط بمطعم واحد.
                 </p>
             </div>
 
@@ -140,6 +186,37 @@ const submit = (): void => {
 
             <div class="p-6 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs">
                 <h2 class="text-sm font-black text-stone-900 dark:text-white flex items-center gap-2 mb-4">
+                    <Bike class="w-4 h-4 text-teal-500" />
+                    المركبة
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1.5">نوع المركبة</label>
+                        <select
+                            v-model="form.vehicle_type"
+                            class="w-full p-3 text-sm rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        >
+                            <option value="MOTORCYCLE">دراجة نارية</option>
+                            <option value="SCOOTER">سكوتر</option>
+                            <option value="CAR">سيارة</option>
+                            <option value="BICYCLE">دراجة</option>
+                            <option value="WALKING">مشياً</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1.5">رقم اللوحة</label>
+                        <input
+                            v-model="form.vehicle_plate"
+                            type="text"
+                            placeholder="أ ب ج 1234"
+                            class="w-full p-3 text-sm rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs">
+                <h2 class="text-sm font-black text-stone-900 dark:text-white flex items-center gap-2 mb-4">
                     <Lock class="w-4 h-4 text-purple-500" />
                     كلمة مرور الحساب
                 </h2>
@@ -172,7 +249,7 @@ const submit = (): void => {
                 </Link>
                 <button
                     type="submit"
-                    :disabled="form.processing || !form.restaurant_id"
+                    :disabled="form.processing || !form.affiliation || (form.affiliation === 'restaurant' && !form.restaurant_id)"
                     class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Save class="w-4 h-4" />

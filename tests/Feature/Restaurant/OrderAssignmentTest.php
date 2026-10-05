@@ -47,6 +47,46 @@ class OrderAssignmentTest extends TestCase
         $this->assertSame($driver->id, $ready->fresh()->assigned_delivery_id);
     }
 
+    public function test_a_platform_driver_can_be_assigned_to_a_restaurant_order(): void
+    {
+        $owner = $this->owner();
+        $ready = $this->order($owner->restaurant, 'READY_FOR_PICKUP');
+        $platformDriver = $this->driver($owner->restaurant);
+        $platformDriver->update(['restaurant_id' => null, 'name' => 'كابتن الموقع']);
+
+        $this->actingAs($owner)
+            ->post("/restaurant/orders/{$ready->id}/assign-driver", [
+                'driver_id' => $platformDriver->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame($platformDriver->id, $ready->fresh()->assigned_delivery_id);
+    }
+
+    public function test_a_driver_from_another_restaurant_cannot_be_assigned(): void
+    {
+        $owner = $this->owner();
+        $ready = $this->order($owner->restaurant, 'READY_FOR_PICKUP');
+        $other = Restaurant::query()->create([
+            'name' => 'مطعم آخر',
+            'slug' => 'other-driver-restaurant',
+            'address' => 'برج العرب',
+            'status' => 'ACTIVE',
+            'availability_status' => 'OPEN',
+            'delivery_provider' => 'RESTAURANT',
+        ]);
+        $foreignDriver = $this->driver($other);
+
+        $this->actingAs($owner)
+            ->post("/restaurant/orders/{$ready->id}/assign-driver", [
+                'driver_id' => $foreignDriver->id,
+            ])
+            ->assertNotFound();
+
+        $this->assertNull($ready->fresh()->assigned_delivery_id);
+    }
+
     public function test_suspended_staff_can_open_the_billing_notice(): void
     {
         $staff = $this->owner('RESTAURANT_STAFF');
@@ -130,8 +170,10 @@ class OrderAssignmentTest extends TestCase
     {
         Role::findOrCreate('DELIVERY_DRIVER', 'web');
 
+        $phone = '010'.random_int(10000000, 99999999);
         $user = User::factory()->create([
             'role' => 'DELIVERY_DRIVER',
+            'phone' => $phone,
             'is_active' => true,
         ]);
         $user->assignRole('DELIVERY_DRIVER');
@@ -140,7 +182,7 @@ class OrderAssignmentTest extends TestCase
             'user_id' => $user->id,
             'restaurant_id' => $restaurant->id,
             'name' => 'كابتن',
-            'phone' => '01022223333',
+            'phone' => $phone,
             'is_active' => true,
             'availability_status' => 'AVAILABLE',
         ]);

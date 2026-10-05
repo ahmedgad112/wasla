@@ -7,6 +7,7 @@ import { availabilityMeta } from '../lib/restaurantAvailability';
 import { resolveMediaUrl } from '../lib/media';
 import { useAvailabilityStore } from '../Stores/availabilityStore';
 import { NAVIGATION_CACHE_FOR } from '../lib/warmNavigation';
+import { useUserLocation } from '../composables/useUserLocation';
 
 let restaurantDetailsReady = false;
 
@@ -16,6 +17,7 @@ const props = defineProps<{
 }>();
 
 const availabilityStore = useAvailabilityStore();
+const { distanceFromUserKm, formatDistanceKm } = useUserLocation();
 const liveRestaurant = computed(() => availabilityStore.applyLive(props.restaurant));
 const discount = computed(() => Number(liveRestaurant.value.student_discount_percentage || 0));
 const eta = computed(() => liveRestaurant.value.estimated_delivery_time || 25);
@@ -42,6 +44,15 @@ const etaLabel = computed(() =>
         ? `${eta.value + 10}-${eta.value + 25}`
         : `${eta.value}-${eta.value + 10}`,
 );
+
+const distanceLabel = computed(() => {
+    const kilometers = distanceFromUserKm(liveRestaurant.value.latitude, liveRestaurant.value.longitude);
+    if (kilometers === null) {
+        return null;
+    }
+
+    return formatDistanceKm(kilometers);
+});
 
 const availabilityClass = computed(() => {
     if (availability.value === 'OPEN') {
@@ -148,6 +159,10 @@ onMounted(() => {
                         <Bike class="h-3.5 w-3.5 text-orange-500" />
                         {{ feeLabel }}
                     </span>
+                    <template v-if="distanceLabel">
+                        <span class="text-stone-300">•</span>
+                        <span class="text-orange-600">{{ distanceLabel }}</span>
+                    </template>
                     <span class="text-stone-300">•</span>
                     <span v-if="foodCount !== undefined">{{ foodCount }} صنف</span>
                     <span class="text-stone-300">•</span>

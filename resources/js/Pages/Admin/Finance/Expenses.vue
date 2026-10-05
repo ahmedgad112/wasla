@@ -180,7 +180,7 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
         <div class="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs">
             <h2 class="text-lg font-semibold text-stone-900 mb-4">سجل المصروفات</h2>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="record-cards w-full text-sm">
                     <thead>
                         <tr class="text-stone-400 border-b border-stone-200">
                             <th class="text-right pb-3 font-medium">الوصف</th>
@@ -196,18 +196,18 @@ const formatDate = (value: string): string => new Date(value).toLocaleDateString
                             :key="exp.id"
                             class="hover:bg-white transition-colors"
                         >
-                            <td class="py-3">
+                            <td data-label="الوصف" class="is-title py-3">
                                 <p class="text-stone-900">{{ exp.description }}</p>
                                 <p v-if="exp.notes" class="text-stone-500 text-xs">{{ exp.notes }}</p>
                             </td>
-                            <td class="py-3">
+                            <td data-label="الفئة" class="py-3">
                                 <span class="px-2 py-1 bg-white/10 text-stone-300 rounded text-xs">
                                     {{ exp.category || '—' }}
                                 </span>
                             </td>
-                            <td class="py-3 text-red-400 font-semibold">{{ fmt(exp.amount) }} ج</td>
-                            <td class="py-3 text-stone-400">{{ formatDate(exp.date) }}</td>
-                            <td class="py-3">
+                            <td data-label="المبلغ" class="py-3 text-red-400 font-semibold">{{ fmt(exp.amount) }} ج</td>
+                            <td data-label="التاريخ" class="py-3 text-stone-400">{{ formatDate(exp.date) }}</td>
+                            <td data-label="" class="is-actions py-3">
                                 <button
                                     v-if="$can('finance.manage')"
                                     type="button"

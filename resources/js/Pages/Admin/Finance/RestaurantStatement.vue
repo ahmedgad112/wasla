@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowRight, RefreshCw } from '@lucide/vue';
+import { ArrowRight, RefreshCw, Wallet } from '@lucide/vue';
 import { subscriptionPlanLabel } from '../../../lib/subscriptionPlans';
 
 interface RestaurantStatement {
@@ -45,6 +45,7 @@ interface StatementCollection {
     payment_method: string;
     collection_date?: string | null;
     notes?: string | null;
+    invoice_number?: string | null;
 }
 
 const props = defineProps<{
@@ -61,6 +62,8 @@ const form = useForm({
     billing_model: (onPercentagePlan ? 'percentage' : 'subscription') as 'subscription' | 'percentage',
     price_mode: 'same' as 'same' | 'custom',
     amount: props.restaurant.monthly_subscription_fee > 0 ? props.restaurant.monthly_subscription_fee : '',
+    pay_full: true,
+    collected_amount: '' as number | '',
     commission_rate: props.restaurant.commission_percentage > 0 ? props.restaurant.commission_percentage : 15,
     payment_method: 'CASH',
 });
@@ -72,8 +75,48 @@ const paymentMethods = [
     { value: 'INSTAPAY', label: 'إنستاباي' },
 ];
 
+const openInvoices = computed(() =>
+    props.invoices.filter((invoice) => invoice.status !== 'PAID' && invoice.total_amount - invoice.paid_amount > 0.009),
+);
+
+const collectionForm = useForm({
+    invoice_id: (openInvoices.value[0]?.id ?? '') as number | '',
+    amount: '' as number | '',
+    payment_method: 'CASH',
+    notes: '',
+});
+
+const selectedInvoice = computed(() =>
+    openInvoices.value.find((invoice) => invoice.id === Number(collectionForm.invoice_id)) ?? null,
+);
+
+const remainingAmount = computed(() => {
+    if (!selectedInvoice.value) {
+        return 0;
+    }
+
+    return Math.round((selectedInvoice.value.total_amount - selectedInvoice.value.paid_amount) * 100) / 100;
+});
+
+const payFullAmount = (): void => {
+    collectionForm.amount = remainingAmount.value;
+};
+
+const paymentMethodLabel = (method: string): string =>
+    paymentMethods.find((item) => item.value === method)?.label ?? method;
+
+const submitCollection = (): void => {
+    collectionForm.post(`/admin/finance/restaurants/${props.restaurant.id}/collections`, {
+        preserveScroll: true,
+    });
+};
+
 const renewalAmount = computed(() =>
     form.price_mode === 'same' ? props.restaurant.monthly_subscription_fee : Number(form.amount || 0),
+);
+
+const collectedNow = computed(() =>
+    form.pay_full ? renewalAmount.value : Number(form.collected_amount || 0),
 );
 
 const fmt = (value: number): string =>
@@ -96,7 +139,12 @@ const statusLabel = (status: string): string => {
 };
 
 const submitRenewal = (): void => {
-    form.post(`/admin/finance/restaurants/${props.restaurant.id}/renew-subscription`);
+    form.transform((data) => ({
+        ...data,
+        collected_amount: data.billing_model === 'subscription'
+            ? (data.pay_full ? renewalAmount.value : data.collected_amount)
+            : null,
+    })).post(`/admin/finance/restaurants/${props.restaurant.id}/renew-subscription`);
 };
 </script>
 
@@ -147,6 +195,79 @@ const submitRenewal = (): void => {
                 <p class="mt-1 text-[11px] text-red-600/80">منه اشتراك {{ fmt(dues.subscription) }} ج.م</p>
             </div>
         </div>
+
+        <form class="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900" @submit.prevent="submitCollection">
+            <h2 class="flex items-center gap-2 text-lg font-black text-stone-900 dark:text-white">
+                <Wallet class="h-5 w-5 text-emerald-500" />
+                تسجيل تحصيل
+            </h2>
+            <p class="mt-1 text-xs text-stone-500">سجّل المبلغ كله أو جزءاً منه. لو في فاتورة مفتوحة اربط التحصيل بيها، ولو مفيش سجّله لوحده.</p>
+
+            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                    <label class="mb-1 block text-sm font-bold text-stone-600 dark:text-stone-300">الفاتورة</label>
+                    <select
+                        v-model="collectionForm.invoice_id"
+                        class="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-white"
+                    >
+                        <option value="">بدون فاتورة</option>
+                        <option v-for="invoice in openInvoices" :key="invoice.id" :value="invoice.id">
+                            {{ invoice.invoice_number }} — متبقي {{ fmt(invoice.total_amount - invoice.paid_amount) }} ج.م
+                        </option>
+                    </select>
+                    <p v-if="collectionForm.errors.invoice_id" class="mt-1 text-xs text-red-500">{{ collectionForm.errors.invoice_id }}</p>
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-bold text-stone-600 dark:text-stone-300">طريقة الدفع</label>
+                    <select
+                        v-model="collectionForm.payment_method"
+                        class="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-white"
+                    >
+                        <option v-for="method in paymentMethods" :key="method.value" :value="method.value">{{ method.label }}</option>
+                    </select>
+                    <p v-if="collectionForm.errors.payment_method" class="mt-1 text-xs text-red-500">{{ collectionForm.errors.payment_method }}</p>
+                </div>
+                <div>
+                    <div class="mb-1 flex items-center justify-between gap-2">
+                        <label class="text-sm font-bold text-stone-600 dark:text-stone-300">المبلغ</label>
+                        <button
+                            v-if="selectedInvoice"
+                            type="button"
+                            class="text-xs font-bold text-orange-600 hover:text-orange-500"
+                            @click="payFullAmount"
+                        >
+                            المبلغ كله ({{ fmt(remainingAmount) }} ج.م)
+                        </button>
+                    </div>
+                    <input
+                        v-model.number="collectionForm.amount"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        class="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-white"
+                    />
+                    <p v-if="collectionForm.errors.amount" class="mt-1 text-xs text-red-500">{{ collectionForm.errors.amount }}</p>
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-bold text-stone-600 dark:text-stone-300">ملاحظة</label>
+                    <input
+                        v-model="collectionForm.notes"
+                        type="text"
+                        placeholder="اختياري"
+                        class="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-white"
+                    />
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button
+                    type="submit"
+                    :disabled="collectionForm.processing"
+                    class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                    {{ collectionForm.processing ? 'جارٍ التسجيل...' : 'تسجيل التحصيل' }}
+                </button>
+            </div>
+        </form>
 
         <form class="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900" @submit.prevent="submitRenewal">
             <h2 class="flex items-center gap-2 text-lg font-black text-stone-900 dark:text-white">
@@ -229,7 +350,7 @@ const submitRenewal = (): void => {
                             v-model.number="form.amount"
                             type="number"
                             min="0.01"
-                            step="0.5"
+                            step="0.01"
                             class="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-white"
                         />
                         <p v-if="form.errors.amount" class="mt-1 text-xs text-red-500">{{ form.errors.amount }}</p>
@@ -245,6 +366,27 @@ const submitRenewal = (): void => {
                             </option>
                         </select>
                         <p v-if="form.errors.payment_method" class="mt-1 text-xs text-red-500">{{ form.errors.payment_method }}</p>
+                    </div>
+                    <div>
+                        <div class="mb-1 flex items-center justify-between gap-2">
+                            <label class="text-sm font-bold text-stone-600 dark:text-stone-300">المحصّل الآن</label>
+                            <button type="button" class="text-xs font-bold text-orange-600 hover:text-orange-500" @click="form.pay_full = true; form.collected_amount = ''">
+                                الفاتورة كلها ({{ fmt(renewalAmount) }} ج.م)
+                            </button>
+                        </div>
+                        <input
+                            v-model.number="form.collected_amount"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            :max="renewalAmount"
+                            :placeholder="form.pay_full ? String(renewalAmount) : 'جزء من الفاتورة'"
+                            class="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-stone-900 focus:border-orange-500 focus:outline-none dark:border-stone-700 dark:bg-stone-950 dark:text-white"
+                            @input="form.pay_full = false"
+                        />
+                        <p v-if="form.pay_full" class="mt-1 text-xs text-stone-500">هيتسجل سداد الفاتورة كاملة.</p>
+                        <p v-else class="mt-1 text-xs text-stone-500">المتبقي {{ fmt(Math.max(renewalAmount - collectedNow, 0)) }} ج.م يفضل مستحق على الفاتورة.</p>
+                        <p v-if="form.errors.collected_amount" class="mt-1 text-xs text-red-500">{{ form.errors.collected_amount }}</p>
                     </div>
                 </div>
                 <p v-if="form.errors.price_mode" class="mt-2 text-xs text-red-500">{{ form.errors.price_mode }}</p>
@@ -266,7 +408,7 @@ const submitRenewal = (): void => {
 
             <div class="mt-4 flex items-center justify-between gap-3">
                 <p class="text-sm font-bold text-stone-700 dark:text-stone-200">
-                    <template v-if="form.billing_model === 'subscription'">هيتحصّل {{ fmt(renewalAmount) }} ج.م</template>
+                    <template v-if="form.billing_model === 'subscription'">هيتحصّل {{ fmt(collectedNow) }} من فاتورة {{ fmt(renewalAmount) }} ج.م</template>
                     <template v-else>هتتخصم {{ fmt(Number(form.commission_rate || 0)) }}% من كل طلب</template>
                 </p>
                 <button
@@ -282,7 +424,7 @@ const submitRenewal = (): void => {
         <div class="rounded-3xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
             <h2 class="mb-3 text-sm font-black text-stone-900 dark:text-white">الفواتير</h2>
             <div class="overflow-x-auto">
-                <table class="w-full text-right text-sm">
+                <table class="record-cards w-full text-right text-sm">
                     <thead class="text-xs text-stone-400">
                         <tr>
                             <th class="py-2">الرقم</th>
@@ -294,11 +436,11 @@ const submitRenewal = (): void => {
                     </thead>
                     <tbody>
                         <tr v-for="invoice in invoices" :key="invoice.id" class="border-t border-stone-100 dark:border-stone-800">
-                            <td class="py-2 font-mono text-xs">{{ invoice.invoice_number }}</td>
-                            <td class="py-2">{{ invoiceTypeLabel(invoice.invoice_type) }}</td>
-                            <td class="py-2">{{ statusLabel(invoice.status) }}</td>
-                            <td class="py-2 font-bold">{{ fmt(invoice.total_amount) }}</td>
-                            <td class="py-2">{{ fmt(invoice.paid_amount) }}</td>
+                            <td data-label="الرقم" class="is-title py-2 font-mono text-xs">{{ invoice.invoice_number }}</td>
+                            <td data-label="النوع" class="py-2">{{ invoiceTypeLabel(invoice.invoice_type) }}</td>
+                            <td data-label="الحالة" class="py-2">{{ statusLabel(invoice.status) }}</td>
+                            <td data-label="المبلغ" class="py-2 font-bold">{{ fmt(invoice.total_amount) }}</td>
+                            <td data-label="المدفوع" class="py-2">{{ fmt(invoice.paid_amount) }}</td>
                         </tr>
                         <tr v-if="invoices.length === 0">
                             <td colspan="5" class="py-6 text-center text-stone-400">لا توجد فواتير</td>
@@ -316,7 +458,12 @@ const submitRenewal = (): void => {
                     :key="collection.id"
                     class="flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2 text-sm dark:bg-stone-950"
                 >
-                    <span>{{ collection.collection_date }} — {{ collection.notes }}</span>
+                    <span>
+                        {{ collection.collection_date }}
+                        <template v-if="collection.invoice_number"> — {{ collection.invoice_number }}</template>
+                        — {{ paymentMethodLabel(collection.payment_method) }}
+                        <template v-if="collection.notes"> — {{ collection.notes }}</template>
+                    </span>
                     <span class="font-black text-emerald-600">{{ fmt(collection.amount) }} ج.م</span>
                 </div>
                 <p v-if="collections.length === 0" class="py-4 text-center text-sm text-stone-400">لا توجد تحصيلات</p>

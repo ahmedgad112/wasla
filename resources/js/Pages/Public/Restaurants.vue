@@ -4,25 +4,29 @@ import { Head } from '@inertiajs/vue3';
 import RestaurantCard from '../../Components/RestaurantCard.vue';
 import type { Restaurant, PaginatedResponse } from '../../Types';
 import { Search, Store } from '@lucide/vue';
+import { useUserLocation } from '../../composables/useUserLocation';
 
 const props = defineProps<{
     restaurants: PaginatedResponse<Restaurant> | Restaurant[];
 }>();
 
 const search = ref('');
+const { place, sortByUserDistance } = useUserLocation();
 
 const items = computed(() =>
     Array.isArray(props.restaurants) ? props.restaurants : props.restaurants?.data || [],
 );
 
-const filtered = computed(() =>
-    items.value.filter(
+const filtered = computed(() => {
+    const matched = items.value.filter(
         (restaurant) =>
             restaurant.name.toLowerCase().includes(search.value.toLowerCase()) ||
             (restaurant.description && restaurant.description.toLowerCase().includes(search.value.toLowerCase())) ||
             (restaurant.address && restaurant.address.toLowerCase().includes(search.value.toLowerCase())),
-    ),
-);
+    );
+
+    return place.value ? sortByUserDistance(matched) : matched;
+});
 </script>
 
 <template>
@@ -30,7 +34,9 @@ const filtered = computed(() =>
 
         <div class="px-4 pt-4 pb-2 sm:px-6 lg:px-8">
             <h1 class="text-xl font-black text-stone-900 dark:text-white md:text-2xl">المطاعم</h1>
-            <p class="mt-0.5 text-xs text-stone-500">اختار مطعمك واطلب في دقايق</p>
+            <p class="mt-0.5 text-xs text-stone-500">
+                {{ place ? `الأقرب إلى ${place.label} أولاً` : 'اختار مطعمك واطلب في دقايق' }}
+            </p>
             <div class="relative mt-3 max-w-2xl">
                 <Search class="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                 <input

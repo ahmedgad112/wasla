@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
 import { MapPin, Phone, Clock, Send, CheckCircle2, MessageSquare } from '@lucide/vue';
+import type { SharedInertiaProps } from '../../Types';
+
+const page = usePage<SharedInertiaProps>();
+const site = computed(() => page.props.site);
+const contactPhone = computed(() => site.value?.contact_phone || site.value?.support_phone || '');
+const contactEmail = computed(() => site.value?.contact_email || site.value?.support_email || '');
 
 const submitted = ref(false);
 const formData = ref({
@@ -45,7 +51,7 @@ const handleSubmit = (): void => {
                         <div>
                             <h3 class="font-bold text-sm text-stone-900 dark:text-white mb-1">المقر الرئيسي</h3>
                             <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                                مدينة برج العرب الجديدة — بجوار مجمع الجامعات، الإسكندرية
+                                {{ site?.office_address || 'مدينة برج العرب الجديدة — بجوار مجمع الجامعات، الإسكندرية' }}
                             </p>
                         </div>
                     </div>
@@ -57,7 +63,17 @@ const handleSubmit = (): void => {
                         <div>
                             <h3 class="font-bold text-sm text-stone-900 dark:text-white mb-1">الهاتف وواتساب</h3>
                             <p class="text-xs font-mono text-stone-600 dark:text-stone-400 leading-relaxed" dir="ltr">
-                                010-9988-7766<br />011-2233-4455
+                                <a v-if="contactPhone" :href="`tel:${contactPhone}`" class="block">{{ contactPhone }}</a>
+                                <a
+                                    v-if="site?.contact_whatsapp"
+                                    :href="`https://wa.me/${site.contact_whatsapp.replace(/\D/g, '')}`"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="block"
+                                >
+                                    واتساب {{ site.contact_whatsapp }}
+                                </a>
+                                <span v-if="contactEmail" class="block">{{ contactEmail }}</span>
                             </p>
                         </div>
                     </div>
@@ -69,7 +85,7 @@ const handleSubmit = (): void => {
                         <div>
                             <h3 class="font-bold text-sm text-stone-900 dark:text-white mb-1">ساعات العمل والتوصيل</h3>
                             <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                                يومياً من 6:00 صباحاً حتى 2:00 بعد منتصف الليل على مدار الأسبوع
+                                {{ site?.working_hours || 'يومياً من 6:00 صباحاً حتى 2:00 بعد منتصف الليل' }}
                             </p>
                         </div>
                     </div>

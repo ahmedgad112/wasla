@@ -427,7 +427,7 @@ const monthCompRate = (m: MonthlySummary): number => {
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-right text-sm">
+                <table class="record-cards w-full text-right text-sm">
                     <thead>
                         <tr class="border-b border-stone-100 dark:border-stone-800 text-stone-400 font-bold text-xs">
                             <th class="py-3 px-4">الشهر</th>
@@ -444,28 +444,28 @@ const monthCompRate = (m: MonthlySummary): number => {
                             :key="idx"
                             class="hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors"
                         >
-                            <td class="py-3.5 px-4 font-bold text-stone-900 dark:text-white">
+                            <td data-label="الشهر" class="is-title py-3.5 px-4 font-bold text-stone-900 dark:text-white">
                                 {{ m.month }}
                             </td>
-                            <td class="py-3.5 px-4 font-bold text-stone-900 dark:text-white">
+                            <td data-label="إجمالي المبيعات" class="py-3.5 px-4 font-bold text-stone-900 dark:text-white">
                                 {{ fmt(m.revenue) }} <span class="text-xs font-normal text-stone-400">ج.م</span>
                             </td>
-                            <td class="py-3.5 px-4 font-bold text-emerald-600 dark:text-emerald-400">
+                            <td data-label="صافي ربح المطعم" class="py-3.5 px-4 font-bold text-emerald-600 dark:text-emerald-400">
                                 {{ fmt(m.net_earnings) }} <span class="text-xs font-normal text-stone-400">ج.م</span>
                             </td>
-                            <td class="py-3.5 px-4">
+                            <td data-label="طلبات مكتملة" class="py-3.5 px-4">
                                 <span class="inline-flex items-center gap-1 text-emerald-600 font-bold">
                                     <CheckCircle2 class="w-3.5 h-3.5" />
                                     {{ m.delivered_orders }}
                                 </span>
                             </td>
-                            <td class="py-3.5 px-4">
+                            <td data-label="طلبات ملغية" class="py-3.5 px-4">
                                 <span class="inline-flex items-center gap-1 text-red-500 font-bold">
                                     <XCircle class="w-3.5 h-3.5" />
                                     {{ m.cancelled_orders }}
                                 </span>
                             </td>
-                            <td class="py-3.5 px-4 font-bold">
+                            <td data-label="نسبة الإنجاز" class="py-3.5 px-4 font-bold">
                                 <span
                                     :class="[
                                         'px-2.5 py-1 rounded-full text-xs',

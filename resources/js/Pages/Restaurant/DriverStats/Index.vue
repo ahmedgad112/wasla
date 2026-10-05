@@ -385,7 +385,7 @@ const timelineOptions = {
                 <p class="text-xs text-stone-400">لا يوجد كباتن مطابقين للبحث حالياً.</p>
             </div>
             <div v-else class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
+                <table class="record-cards w-full text-right text-xs">
                     <thead>
                         <tr class="border-b border-stone-100 dark:border-stone-800 text-stone-400 font-bold">
                             <th class="py-3 px-4">الكابتن</th>
@@ -405,7 +405,7 @@ const timelineOptions = {
                             :key="driver.id"
                             class="hover:bg-stone-50/70 dark:hover:bg-stone-800/40 transition"
                         >
-                            <td class="py-3 px-4">
+                            <td data-label="الكابتن" class="is-title py-3 px-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-9 h-9 rounded-2xl bg-orange-100 dark:bg-stone-800 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black text-sm">
                                         <Award
@@ -437,7 +437,7 @@ const timelineOptions = {
                                 </div>
                             </td>
 
-                            <td class="py-3 px-3">
+                            <td data-label="الحالة الحالية" class="py-3 px-3">
                                 <span
                                     :class="[
                                         'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold',
@@ -468,14 +468,14 @@ const timelineOptions = {
                                 </span>
                             </td>
 
-                            <td class="py-3 px-3">
+                            <td data-label="طلبات اليوم" class="py-3 px-3">
                                 <span class="font-extrabold text-sm text-emerald-600 dark:text-emerald-400">
                                     {{ driver.today_orders }}
                                 </span>
                                 <span class="text-[10px] text-stone-400 mr-1">طلب</span>
                             </td>
 
-                            <td class="py-3 px-3">
+                            <td data-label="الطلبات الجارية الآن" class="py-3 px-3">
                                 <span
                                     v-if="driver.active_orders > 0"
                                     class="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold text-xs"
@@ -485,23 +485,23 @@ const timelineOptions = {
                                 <span v-else class="text-stone-400 text-[11px]">-</span>
                             </td>
 
-                            <td class="py-3 px-3 font-black text-stone-900 dark:text-white">
+                            <td data-label="إجمالي الطلبات" class="py-3 px-3 font-black text-stone-900 dark:text-white">
                                 {{ driver.total_orders }}
                             </td>
 
-                            <td class="py-3 px-3 font-bold text-emerald-600 dark:text-emerald-400">
+                            <td data-label="كاش محصل اليوم" class="py-3 px-3 font-bold text-emerald-600 dark:text-emerald-400">
                                 {{ Number(driver.today_earnings).toLocaleString() }} ج.م
                             </td>
 
-                            <td class="py-3 px-3 font-bold text-stone-700 dark:text-stone-300">
+                            <td data-label="إجمالي الكاش" class="py-3 px-3 font-bold text-stone-700 dark:text-stone-300">
                                 {{ Number(driver.total_earnings).toLocaleString() }} ج.م
                             </td>
 
-                            <td class="py-3 px-3 text-stone-400 text-[11px]">
+                            <td data-label="آخر توصيل" class="py-3 px-3 text-stone-400 text-[11px]">
                                 {{ driver.last_order_at || 'لم يوصل بعد' }}
                             </td>
 
-                            <td class="py-3 px-4 min-w-[140px]">
+                            <td data-label="مؤشر النشاط" class="py-3 px-4 min-w-[140px]">
                                 <div class="flex items-center gap-2">
                                     <div class="flex-1 bg-stone-100 dark:bg-stone-800 rounded-full h-2 overflow-hidden">
                                         <div

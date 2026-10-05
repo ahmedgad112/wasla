@@ -249,10 +249,13 @@ export interface CustomerAddress {
 export interface DeliveryDriver {
     id: number;
     user_id: number;
-    restaurant_id: number;
+    restaurant_id: number | null;
     name: string;
     phone?: string;
     profile_image?: string;
+    vehicle_type?: string;
+    vehicle_plate?: string | null;
+    active_orders_count?: number;
     is_active: boolean;
     availability_status: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
     created_at: string;
@@ -392,6 +395,41 @@ export interface SharedProps extends Record<string, unknown> {
     app_name: string;
     app_slogan?: string;
     support_phone?: string;
+    site?: {
+        app_name: string;
+        platform_name_en: string;
+        app_tagline: string;
+        hero_title: string;
+        hero_subtitle: string;
+        home_headline: string;
+        search_placeholder: string;
+        city_badge: string;
+        offers_section_title: string;
+        restaurants_section_title: string;
+        leaderboard_section_title: string;
+        student_banner_title: string;
+        footer_description: string;
+        meta_title: string;
+        meta_description: string;
+        support_email: string;
+        support_phone: string;
+        contact_phone: string;
+        contact_whatsapp: string;
+        contact_email: string;
+        office_address: string;
+        working_hours: string;
+        facebook_url: string;
+        instagram_url: string;
+        tiktok_url: string;
+        default_delivery_fee: string;
+        minimum_order_amount: string;
+        show_offers_section: boolean;
+        show_restaurants_section: boolean;
+        show_leaderboard_section: boolean;
+        show_stats_section: boolean;
+        allow_registrations: boolean;
+        maintenance_mode: boolean;
+    };
     shell_restaurant?: {
         id: number;
         name: string;

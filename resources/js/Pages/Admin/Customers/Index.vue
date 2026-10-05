@@ -127,7 +127,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
             </form>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
+                <table class="record-cards w-full text-right text-xs">
                     <thead>
                         <tr class="border-b border-stone-200 dark:border-stone-800 text-stone-400 text-[11px] font-bold">
                             <th class="py-3 px-4">العميل</th>
@@ -145,19 +145,19 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                             :key="c.id"
                             class="hover:bg-stone-50 dark:hover:bg-stone-800/50"
                         >
-                            <td class="py-4 px-4 font-bold text-stone-900 dark:text-white">
+                            <td data-label="العميل" class="is-title py-4 px-4 font-bold text-stone-900 dark:text-white">
                                 <Link :href="`/admin/customers/${c.id}`" class="hover:text-orange-600">
                                     {{ c.user?.name }}
                                 </Link>
                             </td>
-                            <td class="py-4 px-4 text-stone-600 dark:text-stone-400">
+                            <td data-label="رقم الهاتف والبريد" class="py-4 px-4 text-stone-600 dark:text-stone-400">
                                 <span class="font-mono block">{{ c.user?.phone || '—' }}</span>
                                 <span class="text-[11px] text-stone-400">{{ c.user?.email }}</span>
                             </td>
-                            <td class="py-4 px-4 text-stone-700 dark:text-stone-300 font-medium">
+                            <td data-label="الجامعة" class="py-4 px-4 text-stone-700 dark:text-stone-300 font-medium">
                                 {{ c.university_name || '—' }}
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="حالة التوثيق" class="py-4 px-4">
                                 <span
                                     v-if="c.student_status === 'APPROVED'"
                                     class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
@@ -183,7 +183,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                                     عميل عادي
                                 </span>
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="حالة الحساب" class="py-4 px-4">
                                 <button
                                     v-if="$can('customers.manage')"
                                     type="button"
@@ -213,10 +213,10 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                                     {{ c.user?.is_active ? 'نشط' : 'موقوف' }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4 font-bold text-stone-900 dark:text-white">
+                            <td data-label="عدد الطلبات" class="py-4 px-4 font-bold text-stone-900 dark:text-white">
                                 {{ c.orders_count || 0 }} طلب
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="إجراءات" class="is-actions py-4 px-4">
                                 <div class="flex items-center justify-center gap-1">
                                     <Link
                                         :href="`/admin/customers/${c.id}`"

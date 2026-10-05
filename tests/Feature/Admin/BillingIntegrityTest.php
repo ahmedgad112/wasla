@@ -61,6 +61,47 @@ class BillingIntegrityTest extends TestCase
         $this->assertTrue($invoice->due_date->isFuture());
     }
 
+    public function test_billing_hub_lists_open_invoices_for_collection(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant('listed-restaurant');
+        $open = $this->invoice($restaurant, now()->addDay()->toDateString(), 'ISSUED');
+        $this->invoice($restaurant, now()->subDay()->toDateString(), 'PAID');
+
+        $this->actingAs($admin)
+            ->get('/admin/billing')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Billing/Hub')
+                ->has('openInvoices', 1)
+                ->where('openInvoices.0.id', $open->id)
+                ->where('openInvoices.0.remaining', 100)
+            );
+    }
+
+    public function test_a_collection_settles_the_selected_invoice(): void
+    {
+        $admin = $this->admin();
+        $restaurant = $this->restaurant('paying-restaurant');
+        $invoice = $this->invoice($restaurant, now()->addDay()->toDateString(), 'ISSUED');
+
+        $this->actingAs($admin)
+            ->post('/admin/billing/collection', [
+                'restaurant_id' => $restaurant->id,
+                'invoice_id' => $invoice->id,
+                'amount' => 100,
+                'payment_method' => 'CASH',
+                'collection_date' => now()->toDateString(),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $invoice->refresh();
+        $this->assertSame('PAID', $invoice->status);
+        $this->assertSame('100.00', $invoice->paid_amount);
+        $this->assertSame('ACTIVE', $restaurant->fresh()->status);
+    }
+
     public function test_a_collection_cannot_pay_another_restaurants_invoice(): void
     {
         $admin = $this->admin();

@@ -198,7 +198,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
 
         <div class="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl overflow-hidden shadow-xs">
             <div class="overflow-x-auto">
-                <table class="w-full text-xs text-right">
+                <table class="record-cards w-full text-xs text-right">
                     <thead class="bg-stone-50 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 text-stone-400 font-bold">
                         <tr>
                             <th class="px-6 py-4">المستخدم</th>
@@ -214,7 +214,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                             :key="user.id"
                             class="hover:bg-stone-50/70 dark:hover:bg-stone-800/40 transition"
                         >
-                            <td class="px-6 py-4">
+                            <td data-label="المستخدم" class="is-title px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-2xl bg-orange-100 dark:bg-stone-800 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black text-sm">
                                         {{ user.name.charAt(0) }}
@@ -238,7 +238,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                                 </div>
                             </td>
 
-                            <td class="px-6 py-4">
+                            <td data-label="الدور / الصلاحية" class="px-6 py-4">
                                 <span
                                     :class="[
                                         'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black border',
@@ -250,7 +250,7 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                                 </span>
                             </td>
 
-                            <td class="px-6 py-4">
+                            <td data-label="الحالة" class="px-6 py-4">
                                 <button
                                     v-if="$can('users.manage')"
                                     type="button"
@@ -273,11 +273,11 @@ const paginationClass = (link: { url: string | null; active: boolean }): string 
                                 </button>
                             </td>
 
-                            <td class="px-6 py-4 text-stone-400 text-[11px]">
+                            <td data-label="تاريخ الإنشاء" class="px-6 py-4 text-stone-400 text-[11px]">
                                 {{ formatDate(user.created_at) }}
                             </td>
 
-                            <td class="px-6 py-4 text-center">
+                            <td data-label="الإجراءات" class="is-actions px-6 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <Link
                                         v-if="$can('users.manage')"

@@ -140,7 +140,7 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
+                <table class="record-cards w-full text-right text-xs">
                     <thead>
                         <tr class="border-b border-stone-200 dark:border-stone-800 text-stone-400 text-[11px] font-bold">
                             <th class="py-3 px-4">المطعم</th>
@@ -158,7 +158,7 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                             :key="r.id"
                             class="hover:bg-stone-50 dark:hover:bg-stone-800/50"
                         >
-                            <td class="py-4 px-4 font-bold text-stone-900 dark:text-white">
+                            <td data-label="المطعم" class="is-title py-4 px-4 font-bold text-stone-900 dark:text-white">
                                 <div class="flex items-center gap-3">
                                     <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-orange-100 text-xs font-bold text-orange-600 dark:bg-orange-950">
                                         <img
@@ -175,11 +175,11 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                                     </div>
                                 </div>
                             </td>
-                            <td class="py-4 px-4 text-stone-600 dark:text-stone-400">
+                            <td data-label="الهاتف والفرع" class="py-4 px-4 text-stone-600 dark:text-stone-400">
                                 <span class="block font-mono">{{ r.phone }}</span>
                                 <span class="block max-w-xs truncate text-[11px]">{{ r.address }}</span>
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="نظام العمولة" class="py-4 px-4">
                                 <span class="block font-bold text-stone-800 dark:text-stone-200">
                                     {{ r.commission_type === 'PERCENTAGE' ? `${r.commission_percentage}% عمولة` : 'اشتراك شهري' }}
                                 </span>
@@ -187,13 +187,13 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                                     +{{ r.monthly_subscription_fee }} ج.م / {{ subscriptionPeriodLabel(r.billing_cycle) }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">
+                            <td data-label="الطلبات" class="py-4 px-4 font-bold text-stone-800 dark:text-stone-200">
                                 {{ r.orders_count || 0 }} طلب
                             </td>
-                            <td class="py-4 px-4 text-stone-600 dark:text-stone-400">
+                            <td data-label="الطيارين" class="py-4 px-4 text-stone-600 dark:text-stone-400">
                                 {{ r.delivery_drivers_count || 0 }} طيار
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="الحالة" class="py-4 px-4">
                                 <span
                                     :class="[
                                         'rounded-full px-2.5 py-0.5 text-[10px] font-bold',
@@ -203,7 +203,7 @@ const restaurantAvatar = (restaurant: Restaurant): string | null => {
                                     {{ r.status === 'ACTIVE' ? 'نشط معتمد' : 'موقوف' }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4">
+                            <td data-label="إجراءات" class="is-actions py-4 px-4">
                                 <div class="flex items-center justify-center gap-1">
                                     <Link
                                         :href="`/admin/restaurants/${r.id}`"

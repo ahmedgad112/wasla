@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\SystemSetting;
+use App\Support\SiteSettings;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -22,17 +22,7 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        $appName = cache()->remember('system_setting.app_name', 3600, function () {
-            return SystemSetting::where('key', 'app_name')->value('value') ?? 'وصلة';
-        });
-
-        $appSlogan = cache()->remember('system_setting.app_slogan', 3600, function () {
-            return SystemSetting::where('key', 'app_slogan')->value('value') ?? 'أكلك من برة';
-        });
-
-        $supportPhone = cache()->remember('system_setting.support_phone', 3600, function () {
-            return SystemSetting::where('key', 'support_phone')->value('value') ?? env('SUPPORT_PHONE', '01027961208');
-        });
+        $site = SiteSettings::shared();
 
         $permissions = [];
         $shellRestaurant = null;
@@ -70,9 +60,10 @@ class HandleInertiaRequests extends Middleware
                 'warning' => $request->session()->get('warning'),
                 'info' => $request->session()->get('info'),
             ],
-            'app_name' => $appName,
-            'app_slogan' => $appSlogan,
-            'support_phone' => $supportPhone,
+            'app_name' => $site['app_name'],
+            'app_slogan' => $site['app_tagline'],
+            'support_phone' => $site['support_phone'],
+            'site' => $site,
             'shell_restaurant' => $shellRestaurant,
             'impersonation' => $request->session()->has('impersonator_id')
                 ? ['admin_name' => (string) $request->session()->get('impersonator_name', '')]

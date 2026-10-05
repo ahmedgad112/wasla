@@ -13,6 +13,7 @@ import type { SharedInertiaProps } from '../Types';
 import CartDrawer from '../Components/CartDrawer.vue';
 import AppBottomNav from '../Components/AppBottomNav.vue';
 import { useAvailabilityStore } from '../Stores/availabilityStore';
+import { requestUserLocation, useUserLocation } from '../composables/useUserLocation';
 import { warmNavigation } from '../lib/warmNavigation';
 
 defineOptions({ inheritAttrs: false });
@@ -44,9 +45,11 @@ const auth = computed(() => page.props.auth);
 const flash = computed(() => page.props.flash);
 const impersonation = computed(() => page.props.impersonation);
 const supportPhone = computed(() => page.props.support_phone);
+const site = computed(() => page.props.site);
 const url = computed(() => page.url);
 const darkMode = ref(false);
 const availabilityStore = useAvailabilityStore();
+const { deliveryLabel, status: locationStatus } = useUserLocation();
 
 const isAuthScreen = computed(() =>
     AUTH_PATHS.some((path) => url.value === path || url.value.startsWith(`${path}?`)),
@@ -65,9 +68,11 @@ watch(
     (authScreen) => {
         if (authScreen) {
             availabilityStore.stop();
-        } else {
-            availabilityStore.start(30000);
+            return;
         }
+
+        availabilityStore.start(30000);
+        requestUserLocation();
     },
     { immediate: true },
 );
@@ -120,21 +125,29 @@ warmNavigation(() => {
             class="sticky top-0 z-30 border-b border-stone-200 bg-white/95 px-4 pb-3 pt-[max(0.65rem,env(safe-area-inset-top))] backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95 sm:px-6 lg:px-8"
         >
             <div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
-                <Link href="/" prefetch class="flex min-w-0 items-center gap-2.5">
-                    <img
-                        src="/images/logo.png"
-                        alt="Wasla"
-                        class="h-10 w-10 shrink-0 rounded-xl object-cover shadow-sm ring-1 ring-stone-200 dark:ring-stone-700"
-                    />
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <Link href="/" prefetch class="shrink-0">
+                        <img
+                            src="/images/logo.png"
+                            :alt="site?.app_name || 'وصلة'"
+                            class="h-10 w-10 rounded-xl object-cover shadow-sm ring-1 ring-stone-200 dark:ring-stone-700"
+                        />
+                    </Link>
                     <div class="min-w-0">
-                        <p class="text-[10px] font-bold leading-none text-stone-400">التوصيل إلى</p>
-                        <p class="mt-0.5 flex items-center gap-0.5 truncate text-sm font-black text-stone-900 dark:text-white">
-                            <MapPin class="h-3.5 w-3.5 shrink-0 text-orange-500" />
-                            <span class="truncate">جامعة برج العرب</span>
-                            <ChevronLeft class="h-3.5 w-3.5 text-stone-400" />
-                        </p>
+                        <Link href="/" prefetch class="block truncate text-[10px] font-bold leading-none text-stone-400">
+                            {{ site?.app_name ?? 'وصلة' }}
+                        </Link>
+                        <button
+                            type="button"
+                            class="mt-0.5 flex max-w-full items-center gap-0.5 text-sm font-black text-stone-900 dark:text-white"
+                            @click="requestUserLocation(true)"
+                        >
+                            <MapPin class="h-3.5 w-3.5 shrink-0 text-orange-500" :class="locationStatus === 'locating' ? 'animate-pulse' : ''" />
+                            <span class="truncate">{{ deliveryLabel || `التوصيل إلى ${site?.city_badge ?? ''}` }}</span>
+                            <ChevronLeft class="h-3.5 w-3.5 shrink-0 text-stone-400" />
+                        </button>
                     </div>
-                </Link>
+                </div>
 
                 <div class="flex items-center gap-1.5">
                     <button

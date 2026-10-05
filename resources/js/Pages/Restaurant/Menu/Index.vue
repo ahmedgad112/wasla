@@ -10,8 +10,6 @@ import {
     Search,
     Upload,
     Clock,
-    LayoutGrid,
-    Table as TableIcon,
     Camera,
     Flame,
     X,
@@ -32,7 +30,6 @@ const props = withDefaults(
 const items = computed(() => props.menu_items?.data || []);
 const search = ref('');
 const selectedCat = ref('ALL');
-const viewMode = ref<'grid' | 'table'>('grid');
 
 const showCreateModal = ref(false);
 const editingItem = ref<MenuItem | null>(null);
@@ -251,35 +248,6 @@ const categoryCount = (catId: number): number => items.value.filter((i) => i.cat
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center bg-stone-100 dark:bg-stone-800 p-1 rounded-2xl border border-stone-200 dark:border-stone-700">
-                        <button
-                            :class="[
-                                'p-2 rounded-xl transition flex items-center gap-1 text-xs font-bold',
-                                viewMode === 'grid'
-                                    ? 'bg-white dark:bg-stone-700 text-orange-600 shadow-xs'
-                                    : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300',
-                            ]"
-                            title="عرض شبكي (كروت مع صور)"
-                            @click="viewMode = 'grid'"
-                        >
-                            <LayoutGrid class="w-4 h-4" />
-                            <span class="hidden sm:inline">كروت</span>
-                        </button>
-                        <button
-                            :class="[
-                                'p-2 rounded-xl transition flex items-center gap-1 text-xs font-bold',
-                                viewMode === 'table'
-                                    ? 'bg-white dark:bg-stone-700 text-orange-600 shadow-xs'
-                                    : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300',
-                            ]"
-                            title="عرض جدول مضغوط"
-                            @click="viewMode = 'table'"
-                        >
-                            <TableIcon class="w-4 h-4" />
-                            <span class="hidden sm:inline">جدول</span>
-                        </button>
-                    </div>
-
                     <button
                         class="px-4 py-3 rounded-2xl bg-gradient-to-r from-orange-600 via-amber-500 to-orange-500 hover:from-orange-700 hover:to-amber-600 text-white font-black text-xs shadow-lg shadow-orange-500/25 transition-all duration-200 flex items-center gap-2 shrink-0 hover:scale-102"
                         @click="openCreateModal"
@@ -349,7 +317,7 @@ const categoryCount = (catId: number): number => items.value.filter((i) => i.cat
             </button>
         </div>
 
-        <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <div
                 v-for="item in filteredItems"
                 :key="item.id"
@@ -452,102 +420,6 @@ const categoryCount = (catId: number): number => items.value.filter((i) => i.cat
             </div>
         </div>
 
-        <div
-            v-else
-            class="bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl rounded-3xl border border-orange-100/80 dark:border-stone-800 overflow-hidden shadow-xl shadow-orange-500/5"
-        >
-            <div class="overflow-x-auto">
-                <table class="w-full text-right text-xs">
-                    <thead>
-                        <tr class="border-b border-stone-200 dark:border-stone-800 text-stone-400 text-[11px] font-bold bg-stone-50/50 dark:bg-stone-800/30">
-                            <th class="py-4 px-6">الصنف والصورة</th>
-                            <th class="py-4 px-4">التصنيف</th>
-                            <th class="py-4 px-4">السعر</th>
-                            <th class="py-4 px-4">الخصم</th>
-                            <th class="py-4 px-4">حالة التوفر</th>
-                            <th class="py-4 px-6 text-center">إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-stone-100 dark:divide-stone-800 font-bold">
-                        <tr
-                            v-for="item in filteredItems"
-                            :key="item.id"
-                            class="hover:bg-orange-50/30 dark:hover:bg-stone-800/50 transition"
-                        >
-                            <td class="py-4 px-6">
-                                <div class="flex items-center gap-3">
-                                    <div class="relative group w-12 h-12 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800 shrink-0 border border-stone-200 dark:border-stone-700">
-                                        <img
-                                            :src="getItemImageUrl(item.image)"
-                                            :alt="item.name"
-                                            class="w-full h-full object-cover"
-                                            @error="onImgError"
-                                        />
-                                        <button
-                                            class="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                                            title="تغيير الصورة"
-                                            @click="openQuickImageModal(item)"
-                                        >
-                                            <Camera class="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="font-black text-stone-900 dark:text-white text-sm">{{ item.name }}</span>
-                                            <span
-                                                v-if="item.is_featured"
-                                                class="text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold"
-                                            >مميز</span>
-                                        </div>
-                                        <p class="text-[11px] text-stone-400 truncate max-w-xs font-normal">{{ item.description }}</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4 px-4 text-stone-600 dark:text-stone-300">
-                                {{ item.category?.name || '—' }}
-                            </td>
-                            <td class="py-4 px-4 font-black text-stone-900 dark:text-white">
-                                {{ item.price }} ج.م
-                            </td>
-                            <td class="py-4 px-4 text-emerald-600 font-black">
-                                {{ item.discount_price ? `${item.discount_price} ج.م` : '—' }}
-                            </td>
-                            <td class="py-4 px-4">
-                                <button
-                                    :class="[
-                                        'px-3 py-1 rounded-full text-[10px] font-black transition',
-                                        item.is_available
-                                            ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                                            : 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300',
-                                    ]"
-                                    @click="handleToggleAvailable(item.id)"
-                                >
-                                    {{ item.is_available ? 'متوفر بالمطبخ' : 'غير متاح' }}
-                                </button>
-                            </td>
-                            <td class="py-4 px-6 text-center">
-                                <div class="flex items-center justify-center gap-2">
-                                    <button
-                                        class="p-2 rounded-xl text-stone-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-stone-800 transition"
-                                        title="تعديل الصنف"
-                                        @click="openEditModal(item)"
-                                    >
-                                        <Edit2 class="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        class="p-2 rounded-xl text-stone-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-stone-800 transition"
-                                        title="حذف الصنف"
-                                        @click="confirmDeleteId = item.id"
-                                    >
-                                        <Trash2 class="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
 
     <!-- Create Modal -->

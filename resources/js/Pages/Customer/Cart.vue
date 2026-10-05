@@ -147,11 +147,11 @@ const onImageError = (e: Event): void => {
                     >
                         <div class="w-11 h-11 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center mx-auto"><Lock class="w-5 h-5" /></div>
                         <p class="text-sm font-black text-stone-900 dark:text-white">يلزم تسجيل الدخول لتأكيد الطلب</p>
-                        <div class="grid grid-cols-2 gap-2 pt-1">
+                        <div class="grid gap-2 pt-1" :class="page.props.site?.allow_registrations === false ? 'grid-cols-1' : 'grid-cols-2'">
                             <Link href="/login" class="py-2.5 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs flex items-center justify-center gap-1.5">
                                 <LogIn class="w-3.5 h-3.5" /><span>تسجيل الدخول</span>
                             </Link>
-                            <Link href="/register" class="py-2.5 px-3 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 font-bold text-xs flex items-center justify-center gap-1">
+                            <Link v-if="page.props.site?.allow_registrations !== false" href="/register" class="py-2.5 px-3 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 font-bold text-xs flex items-center justify-center gap-1">
                                 <User class="w-3.5 h-3.5" /><span>إنشاء حساب</span>
                             </Link>
                         </div>

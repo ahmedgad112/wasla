@@ -252,7 +252,7 @@ const restaurantBarWidth = (orders: number): string => {
                 أكثر الأطباق طلباً
             </h2>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="record-cards w-full text-sm">
                     <thead>
                         <tr class="text-stone-400 border-b border-stone-200">
                             <th class="text-right pb-3 font-medium">#</th>
@@ -267,10 +267,10 @@ const restaurantBarWidth = (orders: number): string => {
                             :key="i"
                             class="hover:bg-white transition-colors"
                         >
-                            <td class="py-3 text-stone-500">{{ i + 1 }}</td>
-                            <td class="py-3 text-stone-900 font-medium">{{ item.name }}</td>
-                            <td class="py-3 text-stone-400">{{ item.restaurant }}</td>
-                            <td class="py-3">
+                            <td data-label="#" class="py-3 text-stone-500">{{ i + 1 }}</td>
+                            <td data-label="الطبق" class="is-title py-3 text-stone-900 font-medium">{{ item.name }}</td>
+                            <td data-label="المطعم" class="py-3 text-stone-400">{{ item.restaurant }}</td>
+                            <td data-label="عدد الطلبات" class="py-3">
                                 <span class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs font-semibold">
                                     {{ item.count }}
                                 </span>
